@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+  <meta name="theme-color" content="#15110e">
+  <title>Pong — Gamf</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Anton&family=Archivo:wght@400;500;600;700;800;900&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../../gamf.css">
+  <style>
+    /* game-specific only — chrome comes from gamf.css */
+    html,body{height:100%;overflow:hidden;touch-action:none;
+      -webkit-user-select:none;user-select:none}
+    canvas{display:block;width:100%;height:100%;touch-action:none}
+  </style>
+</head>
+<body class="gx" style="--gx-accent:#ff7a6c">
+  <script src="../../gamf-icons.js"></script>
+  <div class="gx-hud">
+    <a class="gx-hud__back" href="../../"><svg class="gx-ico"><use href="#i-back"/></svg> Arcade</a>
+    <span class="gx-hud__spacer"></span>
+    <span class="gx-pill">You <b id="you">0</b></span>
+    <span class="gx-pill">CPU <b id="cpu">0</b></span>
+    <span class="gx-pill gx-pill--best"><svg class="gx-ico" style="width:1em;height:1em"><use href="#i-trophy"/></svg> <b id="best">0</b></span>
+  </div>
+  <canvas id="c"></canvas>
+  <div class="gx-hint" id="hint">
+    <span class="gx-hint__chip"><svg class="gx-ico"><use href="#i-up"/></svg> drag to move paddle</span>
+    <span class="gx-hint__chip"><svg class="gx-ico"><use href="#i-down"/></svg> ↑ ↓ / W S · Space serve</span>
+    <span class="gx-hint__chip"><svg class="gx-ico"><use href="#i-pause"/></svg> P pause · R restart</span>
+  </div>
+  <div class="gx-modal" id="paused">
+    <div class="gx-modal__card">
+      <h2 class="gx-modal__title">Paused</h2>
+      <button class="gx-btn gx-btn--primary" id="resume"><svg class="gx-ico"><use href="#i-play"/></svg> Resume</button>
+    </div>
+  </div>
+  <div class="gx-modal" id="over">
+    <div class="gx-modal__card">
+      <h2 class="gx-modal__title" id="overTitle">Game Over</h2>
+      <div class="gx-modal__row">You <b id="finalYou">0</b></div>
+      <div class="gx-modal__row">CPU <b id="finalCpu">0</b></div>
+      <div class="gx-modal__row">Wins <b id="finalWins">0</b></div>
+      <div class="gx-modal__new" id="newBest"></div>
+      <button class="gx-btn gx-btn--primary" id="again"><svg class="gx-ico"><use href="#i-restart"/></svg> Play again</button>
+    </div>
+  </div>
+  <script type="module">
+    import { onDrag } from './touch.js';
+    const SLUG='pong', BEST_KEY='gamf-arcade-'+SLUG+'-best';
+    const WIN_SCORE=7;
+    const RED='#d8412b', AMBER='#e8a23a', BONE='#f4ede1', BG='#15110e';
+    const canvas=document.getElementById('c'), ctx=canvas.getContext('2d');
+    let W,H,dpr;
+    function resize(){ dpr=Math.min(devicePixelRatio||1,2); W=innerWidth; H=innerHeight;
+      canvas.width=W*dpr; canvas.height=H*dpr; ctx.setTransform(dpr,0,0,dpr,0,0); layout(); }
+    addEventListener('resize', resize);
+
+    // seeded LCG for any randomness (deterministic, no clock/Math.random)
+    let seed=987654321; const rnd=()=> (seed=(seed*1103515245+12345)&0x7fffffff)/0x7fffffff;
+
+    // centered play field so it looks good on wide screens too
+    let field={x:0,y:0,w:0,h:0};
+    const PAD_W=14, WALL=0;
+    const player={ x:0, y:0, w:PAD_W, h:0 };   // left paddle
+    const ai={ x:0, y:0, w:PAD_W, h:0 };        // right paddle
+    const ball={ x:0, y:0, vx:0, vy:0, r:9, speed:6 };
+
+    let youScore=0, cpuScore=0, wins=+(localStorage.getItem('gamf-arcade-'+SLUG+'-wins')||0);
+    let alive=true, paused=false, serving=true, serveDir=1, t=0, justWon=false;
+    let best=+(localStorage.getItem(BEST_KEY)||0);
+    document.getElementById('best').textContent=best;
+
+    let particles=[];
+    function burst(cx,cy,color,n=12){ for(let i=0;i<n;i++){ const a=rnd()*Math.PI*2, sp=0.8+rnd()*3.2;
+      particles.push({x:cx,y:cy,vx:Math.cos(a)*sp,vy:Math.sin(a)*sp,life:1,color}); } }
+
+    function layout(){
+      const fw=Math.min(W-16, 760), fh=Math.min(H-16, 520);
+      field.w=fw; field.h=fh; field.x=(W-fw)/2; field.y=(H-fh)/2;
+      player.h=ai.h=Math.max(70, fh*0.18);
+      player.x=field.x+18;
+      ai.x=field.x+fw-18-PAD_W;
+      // clamp paddles inside field after a resize
+      player.y=clampPad(player.y || field.y+fh/2-player.h/2);
+      ai.y=clampPad(ai.y || field.y+fh/2-ai.h/2);
+      if(serving) resetServe(serveDir);
+    }
+    function clampPad(y){ return Math.max(field.y, Math.min(field.y+field.h-player.h, y)); }
+
+    function resetServe(dir){
+      serving=true; serveDir=dir;
+      ball.x=field.x+field.w/2; ball.y=field.y+field.h/2;
+      ball.vx=0; ball.vy=0;
+      ball.speed=6;
+    }
+    function serve(){ if(serving===false||!alive||paused) return;
+      serving=false;
+      const ang=(rnd()-0.5)*0.7; // -0.35..0.35 rad vertical spread
+      ball.vx=Math.cos(ang)*ball.speed*serveDir;
+      ball.vy=Math.sin(ang)*ball.speed;
+      burst(ball.x,ball.y,AMBER,10);
+    }
+
+    function startGame(){ youScore=0; cpuScore=0; alive=true; paused=false; justWon=false;
+      particles=[]; player.y=0; ai.y=0; layout(); resetServe(1); updateHud();
+      document.getElementById('over').classList.remove('gx-show');
+      document.getElementById('paused').classList.remove('gx-show'); }
+
+    function updateHud(){ document.getElementById('you').textContent=youScore;
+      document.getElementById('cpu').textContent=cpuScore;
+      document.getElementById('best').textContent=best; }
+
+    function togglePause(force){ if(!alive) return;
+      paused=(force===undefined)?!paused:force;
+      document.getElementById('paused').classList.toggle('gx-show',paused); }
+
+    function point(toPlayer){
+      if(toPlayer){ youScore++; burst(ai.x,ball.y,RED,18); }
+      else { cpuScore++; burst(player.x+PAD_W,ball.y,AMBER,18); }
+      updateHud();
+      if(youScore>=WIN_SCORE || cpuScore>=WIN_SCORE){ end(youScore>cpuScore); return; }
+      // loser serves toward the winner's opponent: serve toward whoever was scored on
+      resetServe(toPlayer? 1 : -1);
+    }
+
+    function end(victory){ alive=false; justWon=victory;
+      let nb=false;
+      if(victory){ wins++; localStorage.setItem('gamf-arcade-'+SLUG+'-wins',wins);
+        if(wins>best){ best=wins; nb=true; localStorage.setItem(BEST_KEY,best); } }
+      updateHud();
+      document.getElementById('overTitle').textContent=victory?'You win!':'CPU wins';
+      document.getElementById('finalYou').textContent=youScore;
+      document.getElementById('finalCpu').textContent=cpuScore;
+      document.getElementById('finalWins').textContent=wins;
+      document.getElementById('newBest').textContent=nb?'★ New best!':'';
+      document.getElementById('over').classList.add('gx-show'); }
+
+    function setPlayerCenter(py){ player.y=clampPad(py-player.h/2); }
+
+    // touch: drag anywhere to move your paddle, tap to serve
+    let dragMoved=false;
+    onDrag(canvas,{ start:()=>{dragMoved=false;}, move:({y,dy})=>{ if(Math.abs(dy)>0)dragMoved=true;
+        if(alive&&!paused) setPlayerCenter(y); }, end:()=>{ if(!dragMoved){ if(!alive) startGame(); else serve(); } } });
+
+    // keyboard
+    let keyDir=0;
+    addEventListener('keydown',e=>{ const k=e.key.length===1?e.key.toLowerCase():e.key;
+      if(k==='ArrowUp'||k==='w'){ e.preventDefault(); keyDir=-1; }
+      else if(k==='ArrowDown'||k==='s'){ e.preventDefault(); keyDir=1; }
+      else if(k===' '||k==='Enter'){ e.preventDefault(); if(!alive) startGame(); else serve(); }
+      else if(k==='p'){ e.preventDefault(); togglePause(); }
+      else if(k==='r'){ e.preventDefault(); startGame(); } });
+    addEventListener('keyup',e=>{ const k=e.key.length===1?e.key.toLowerCase():e.key;
+      if(((k==='ArrowUp'||k==='w')&&keyDir<0)||((k==='ArrowDown'||k==='s')&&keyDir>0)) keyDir=0; });
+    document.getElementById('again').onclick=startGame;
+    document.getElementById('resume').onclick=()=>togglePause(false);
+
+    function hitPaddle(p){
+      return ball.y+ball.r>=p.y && ball.y-ball.r<=p.y+p.h;
+    }
+
+    function step(){
+      if(serving){ return; }
+      ball.x+=ball.vx; ball.y+=ball.vy;
+      // top / bottom walls
+      if(ball.y<field.y+ball.r){ ball.y=field.y+ball.r; ball.vy=Math.abs(ball.vy); burst(ball.x,field.y,BONE,5); }
+      if(ball.y>field.y+field.h-ball.r){ ball.y=field.y+field.h-ball.r; ball.vy=-Math.abs(ball.vy); burst(ball.x,field.y+field.h,BONE,5); }
+      // player paddle (left)
+      if(ball.vx<0 && ball.x-ball.r<=player.x+player.w && ball.x>player.x && hitPaddle(player)){
+        ball.x=player.x+player.w+ball.r;
+        bounce(player, 1);
+      }
+      // ai paddle (right)
+      if(ball.vx>0 && ball.x+ball.r>=ai.x && ball.x<ai.x+ai.w && hitPaddle(ai)){
+        ball.x=ai.x-ball.r;
+        bounce(ai, -1);
+      }
+      // scoring
+      if(ball.x<field.x-30){ point(false); }      // ball off left -> CPU scores
+      else if(ball.x>field.x+field.w+30){ point(true); } // ball off right -> you score
+    }
+
+    function bounce(p, dir){
+      // ball speeds up on every paddle hit
+      ball.speed=Math.min(15, ball.speed+0.45);
+      const hit=(ball.y-(p.y+p.h/2))/(p.h/2); // -1..1, where it struck the paddle
+      const ang=hit*(Math.PI*0.38);
+      ball.vx=Math.cos(ang)*ball.speed*dir;
+      ball.vy=Math.sin(ang)*ball.speed;
+      burst(ball.x,ball.y, dir>0?AMBER:RED, 8);
+    }
+
+    function aiThink(){
+      // simple AI: track ball with capped speed + small deadzone; harder as rally heats up
+      const center=ai.y+ai.h/2;
+      const aimSpeed=Math.min(9.5, 4.2+ball.speed*0.45);
+      const dz=18;
+      // only react meaningfully when the ball heads toward the AI
+      const target=(ball.vx>0)? ball.y : field.y+field.h/2;
+      if(target<center-dz) ai.y=clampPad(ai.y-aimSpeed);
+      else if(target>center+dz) ai.y=clampPad(ai.y+aimSpeed);
+    }
+
+    function frame(){ t++;
+      if(alive&&!paused){
+        if(keyDir){ player.y=clampPad(player.y + keyDir*8.5); }
+        aiThink();
+        step();
+      }
+      particles.forEach(p=>{ p.x+=p.vx; p.y+=p.vy; p.vy+=0.05; p.life-=0.03; });
+      particles=particles.filter(p=>p.life>0);
+      render();
+      requestAnimationFrame(frame);
+    }
+
+    function roundRect(x,y,w,h,r){ ctx.beginPath(); ctx.roundRect(x,y,w,h,r); }
+
+    function render(){
+      // warm near-black backdrop
+      ctx.fillStyle=BG; ctx.fillRect(0,0,W,H);
+      // subtle scanline texture inside field
+      ctx.save();
+      roundRect(field.x,field.y,field.w,field.h,10); ctx.clip();
+      const g=ctx.createLinearGradient(0,field.y,0,field.y+field.h);
+      g.addColorStop(0,'#1b1410'); g.addColorStop(1,'#100c09'); ctx.fillStyle=g;
+      ctx.fillRect(field.x,field.y,field.w,field.h);
+      ctx.globalAlpha=0.06; ctx.fillStyle=BONE;
+      for(let y=field.y;y<field.y+field.h;y+=4) ctx.fillRect(field.x,y,field.w,1.4);
+      ctx.restore();
+      // field border
+      ctx.save(); ctx.globalAlpha=0.5; ctx.strokeStyle='#4a3826'; ctx.lineWidth=2;
+      roundRect(field.x,field.y,field.w,field.h,10); ctx.stroke(); ctx.restore();
+      // center net (dashed)
+      ctx.save(); ctx.globalAlpha=0.4; ctx.fillStyle='#5a4c3c';
+      const cx=field.x+field.w/2;
+      for(let y=field.y+8;y<field.y+field.h-8;y+=26) ctx.fillRect(cx-2,y,4,14);
+      ctx.restore();
+      // big center score
+      ctx.save(); ctx.globalAlpha=0.10; ctx.fillStyle=BONE;
+      ctx.font='400 120px Anton, system-ui'; ctx.textAlign='center'; ctx.textBaseline='middle';
+      ctx.fillText(youScore, field.x+field.w*0.30, field.y+field.h/2);
+      ctx.fillText(cpuScore, field.x+field.w*0.70, field.y+field.h/2);
+      ctx.restore();
+      // player paddle (amber)
+      paddle(player, AMBER, '#ffce7a');
+      // ai paddle (red)
+      paddle(ai, RED, '#f08a76');
+      // ball
+      ctx.save(); ctx.shadowBlur=20; ctx.shadowColor=BONE;
+      const bg=ctx.createRadialGradient(ball.x-2,ball.y-2,1,ball.x,ball.y,ball.r);
+      bg.addColorStop(0,'#fffaf0'); bg.addColorStop(1,'#e8d9bf'); ctx.fillStyle=bg;
+      ctx.beginPath(); ctx.arc(ball.x,ball.y,ball.r,0,7); ctx.fill(); ctx.restore();
+      // particles
+      particles.forEach(p=>{ ctx.save(); ctx.globalAlpha=Math.max(0,p.life); ctx.fillStyle=p.color;
+        ctx.shadowBlur=8; ctx.shadowColor=p.color; ctx.beginPath();
+        ctx.arc(p.x,p.y,2.6*p.life,0,7); ctx.fill(); ctx.restore(); });
+      // serve prompt
+      if(alive&&serving&&!paused){ ctx.save(); ctx.globalAlpha=0.5+0.3*Math.sin(t/12);
+        ctx.fillStyle=BONE; ctx.font='800 15px Archivo, system-ui'; ctx.textAlign='center';
+        ctx.fillText('TAP OR SPACE TO SERVE', field.x+field.w/2, field.y+field.h/2+ball.r+34); ctx.restore(); }
+    }
+
+    function paddle(p, base, hi){
+      ctx.save(); ctx.shadowBlur=14; ctx.shadowColor=base;
+      const pg=ctx.createLinearGradient(p.x,p.y,p.x,p.y+p.h);
+      pg.addColorStop(0,hi); pg.addColorStop(0.5,base); pg.addColorStop(1,hi);
+      ctx.fillStyle=pg; roundRect(p.x,p.y,p.w,p.h,7); ctx.fill();
+      ctx.globalAlpha=0.25; ctx.fillStyle='#ffffff';
+      roundRect(p.x+2,p.y+2,p.w-4,p.h*0.3,5); ctx.fill();
+      ctx.restore();
+    }
+
+    resize(); startGame(); frame();
+  </script>
+</body>
+</html>

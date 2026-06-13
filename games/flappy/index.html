@@ -1,0 +1,512 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+  <meta name="theme-color" content="#15110e">
+  <title>Flappy — Gamf</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Anton&family=Archivo:wght@400;500;600;700;800;900&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../../gamf.css">
+  <!-- importmap kept for parity with 3D games in the portal (unused by this 2D Canvas build) -->
+  <script type="importmap">
+  { "imports": { "three": "https://unpkg.com/three@0.160.0/build/three.module.js" } }
+  </script>
+  <style>
+    /* game-specific bits only — chrome comes from gamf.css */
+    html, body { height: 100%; overflow: hidden; touch-action: none;
+      -webkit-user-select: none; user-select: none; }
+    canvas { display: block; width: 100%; height: 100%; touch-action: none; }
+    /* tap target hint pulse shown on the attract screen lives on the canvas */
+  </style>
+</head>
+<body class="gx" style="--gx-accent:#ff7a6c">
+  <script src="../../gamf-icons.js"></script>
+
+  <canvas id="c"></canvas>
+
+  <!-- HUD (design system) -->
+  <div class="gx-hud">
+    <a class="gx-hud__back" href="../../"><svg class="gx-ico"><use href="#i-back"/></svg> Arcade</a>
+    <span class="gx-hud__spacer"></span>
+    <span class="gx-pill gx-pill--best"><svg class="gx-ico" style="width:1em;height:1em"><use href="#i-trophy"/></svg> <b id="best">0</b></span>
+    <span class="gx-pill">Score <b id="score">0</b></span>
+  </div>
+
+  <!-- Controls hint (design system) -->
+  <div class="gx-hint">
+    <span class="gx-hint__chip"><svg class="gx-ico"><use href="#i-play"/></svg> Tap / hold to flap</span>
+    <span class="gx-hint__chip"><svg class="gx-ico"><use href="#i-up"/></svg> Space · ↑ · W flap</span>
+    <span class="gx-hint__chip"><svg class="gx-ico"><use href="#i-pause"/></svg> P pause · R restart</span>
+  </div>
+
+  <!-- Game-over modal (design system) -->
+  <div class="gx-modal" id="over">
+    <div class="gx-modal__card">
+      <h2 class="gx-modal__title" id="overTitle">Game Over</h2>
+      <div class="gx-modal__row">Score <b id="finalScore">0</b></div>
+      <div class="gx-modal__row">Best <b id="finalBest">0</b></div>
+      <p class="gx-modal__new" id="newBest"></p>
+      <button class="gx-btn gx-btn--primary" id="again"><svg class="gx-ico"><use href="#i-restart"/></svg> Play again</button>
+    </div>
+  </div>
+
+  <!-- Pause modal (design system) -->
+  <div class="gx-modal" id="paused">
+    <div class="gx-modal__card">
+      <h2 class="gx-modal__title">Paused</h2>
+      <div class="gx-modal__row">Score <b id="pauseScore">0</b></div>
+      <button class="gx-btn gx-btn--primary" id="resume"><svg class="gx-ico"><use href="#i-play"/></svg> Resume</button>
+    </div>
+  </div>
+
+  <script type="module">
+    import { onTap } from './touch.js';
+    const SLUG='flappy', BEST_KEY='gamf-arcade-'+SLUG+'-best';
+    const canvas=document.getElementById('c'), ctx=canvas.getContext('2d');
+
+    // ---- arcade palette ----
+    const BG='#15110e', SCREEN='#100c09', RED='#d8412b', AMBER='#e8a23a',
+          BONE='#f4ede1', LINE='#36281d', INK='#0a0806';
+
+    let W,H,dpr;
+    function resize(){ dpr=Math.min(devicePixelRatio||1,2); W=innerWidth; H=innerHeight;
+      canvas.width=W*dpr; canvas.height=H*dpr; ctx.setTransform(dpr,0,0,dpr,0,0); }
+    addEventListener('resize', resize); resize();
+
+    // ---- seeded LCG (no Math.random / clock APIs) ----
+    let seed=0x9e3779b1;
+    const rnd=()=> (seed=(seed*1103515245+12345)&0x7fffffff)/0x7fffffff;
+    const rng=(a,b)=> a+(b-a)*rnd();
+
+    const TAU=Math.PI*2;
+    const clamp=(v,a,b)=> v<a?a:(v>b?b:v);
+
+    // ---- world tuning (resolution-independent; scaled by S) ----
+    // Reference design height 640px; everything scales so it plays the same on any screen.
+    let S=1;                                  // scale factor vs reference
+    function computeScale(){ S=clamp(H/640,0.7,1.7); }
+    computeScale();
+
+    const REF = {
+      gravity: 0.62,          // px/frame^2 at S=1
+      flap: -9.6,             // impulse
+      maxFall: 13,
+      birdR: 15,
+      pipeW: 78,
+      gap: 188,               // vertical gap between pipes
+      speed: 3.05,            // world scroll speed
+      spacing: 250,           // horizontal distance between pipe centers
+      groundH: 96,            // ground band height
+    };
+    // live (scaled) values, refreshed on resize
+    let GRAV,FLAP,MAXFALL,BIRD_R,PIPE_W,GAP,SPEED,SPACING,GROUND;
+    function scaleTuning(){
+      computeScale();
+      GRAV=REF.gravity*S; FLAP=REF.flap*S; MAXFALL=REF.maxFall*S;
+      BIRD_R=REF.birdR*S; PIPE_W=REF.pipeW*S; SPEED=REF.speed*S;
+      SPACING=REF.spacing*S; GROUND=REF.groundH*S;
+      // keep the gap playable on short screens but never silly-large
+      GAP=clamp(REF.gap*S, 150, Math.max(160, H-GROUND-150));
+    }
+    scaleTuning();
+    addEventListener('resize', ()=>{ scaleTuning(); });
+
+    // ---- state ----
+    // mode: 'ready' (attract, waiting for first flap) | 'play' | 'dead'
+    let mode='ready', paused=false;
+    let bird, pipes=[], particles=[], feathers=[];
+    let score=0, t=0, distAcc=0, flashT=0, shakeT=0;
+    let best=+(localStorage.getItem(BEST_KEY)||0);
+    document.getElementById('best').textContent=best;
+
+    function groundY(){ return H-GROUND; }
+    function birdX(){ return Math.round(W*0.30); }
+
+    function makeBird(){ return { y:H*0.42, vy:0, a:0, flapT:0 }; }
+
+    // pipe gap centers chosen from a margin band so they're always reachable
+    function nextGapY(){
+      const top=GAP/2+40*S, bot=groundY()-GAP/2-30*S;
+      return rng(top, Math.max(top+10, bot));
+    }
+    function makePipe(x){ return { x, gy:nextGapY(), passed:false }; }
+
+    function resetPipes(){
+      pipes=[];
+      const startX=W+PIPE_W;
+      // seed three pipes ahead so the field is full as soon as play begins
+      for(let i=0;i<4;i++) pipes.push(makePipe(startX + i*SPACING));
+    }
+
+    function start(){
+      seed=0x9e3779b1; scaleTuning();
+      score=0; t=0; distAcc=0; flashT=0; shakeT=0;
+      particles=[]; feathers=[];
+      bird=makeBird(); resetPipes();
+      mode='ready'; paused=false;
+      updateHud();
+      document.getElementById('over').classList.remove('gx-show');
+      document.getElementById('paused').classList.remove('gx-show');
+    }
+
+    function updateHud(){ document.getElementById('score').textContent=score; }
+
+    function flap(){
+      if(paused) return;
+      if(mode==='dead') return;
+      if(mode==='ready') mode='play';
+      bird.vy=FLAP; bird.flapT=8;
+      // little puff of feathers/dust under the wing
+      for(let i=0;i<5;i++){ const a=rng(TAU*0.55,TAU*0.95);
+        particles.push({ x:birdX()-BIRD_R*0.4, y:bird.y+BIRD_R*0.3,
+          vx:Math.cos(a)*rng(0.6,2)*S, vy:Math.sin(a)*rng(0.4,1.6)*S,
+          life:1, r:rng(1.4,3)*S, c:'#cdbfa8' }); }
+    }
+
+    function burst(x,y,n,colors){
+      for(let i=0;i<n;i++){ const a=rnd()*TAU, sp=rng(1,6)*S;
+        particles.push({ x,y, vx:Math.cos(a)*sp, vy:Math.sin(a)*sp-1.4*S,
+          life:1, r:rng(1.6,3.6)*S, c:colors[(rnd()*colors.length)|0] }); }
+    }
+    function loseFeathers(x,y){
+      for(let i=0;i<10;i++){ const a=rnd()*TAU, sp=rng(0.6,4)*S;
+        feathers.push({ x,y, vx:Math.cos(a)*sp, vy:Math.sin(a)*sp-2*S,
+          rot:rng(0,TAU), vr:rng(-0.2,0.2), life:1, s:rng(5,10)*S }); }
+    }
+
+    function die(){
+      if(mode==='dead') return;
+      mode='dead';
+      flashT=1; shakeT=1;
+      burst(birdX(), bird.y, 22, [AMBER,RED,'#ffd27a']);
+      loseFeathers(birdX(), bird.y);
+      const isNew=score>best;
+      if(isNew){ best=score; localStorage.setItem(BEST_KEY,best);
+        document.getElementById('best').textContent=best; }
+      document.getElementById('finalScore').textContent=score;
+      document.getElementById('finalBest').textContent=best;
+      document.getElementById('newBest').textContent=isNew?'★ New best!':'';
+      // brief delay so the death pop is visible before the modal appears
+      deadShowAt=t+34;
+    }
+    let deadShowAt=Infinity;
+
+    function togglePause(force){
+      if(mode==='dead') return;
+      paused = (force===undefined)? !paused : force;
+      document.getElementById('pauseScore').textContent=score;
+      document.getElementById('paused').classList.toggle('gx-show',paused);
+    }
+
+    // ---------- input: KEYBOARD ----------
+    addEventListener('keydown', e=>{
+      const k=e.key.length===1?e.key.toLowerCase():e.key;
+      if(k===' '||k==='Enter'||k==='ArrowUp'||k==='w'){
+        e.preventDefault();
+        if(mode==='dead'){ if(t>=deadShowAt) start(); return; }
+        if(paused) return;
+        flap();
+      } else if(k==='ArrowDown'||k==='s'){
+        e.preventDefault();
+        // quick dive nudge — adds a bit of control without breaking one-button feel
+        if(mode==='play' && !paused) bird.vy=Math.min(MAXFALL, bird.vy+4*S);
+      } else if(k==='p'){ e.preventDefault(); togglePause(); }
+      else if(k==='r'){ e.preventDefault(); start(); }
+    });
+
+    // ---------- input: TOUCH / POINTER ----------
+    // Restart from the death pop on a clean tap (shared helper keeps this self-contained).
+    onTap(canvas, ()=>{
+      if(mode==='dead' && t>=deadShowAt) start();
+    });
+    // Flap on pointerdown for the snappiest one-button feel (touch, mouse and stylus).
+    // Single handler => exactly one flap per press, no double-trigger with onTap.
+    canvas.addEventListener('pointerdown', e=>{
+      e.preventDefault();
+      if(mode==='dead' || paused) return;
+      flap();
+    });
+
+    document.getElementById('again').onclick=start;
+    document.getElementById('resume').onclick=()=>togglePause(false);
+
+    // ---------- update ----------
+    function update(){
+      t++;
+      if(flashT>0) flashT=Math.max(0,flashT-0.06);
+      if(shakeT>0) shakeT=Math.max(0,shakeT-0.05);
+
+      // particles + feathers always animate
+      for(const p of particles){ p.x+=p.vx; p.y+=p.vy; p.vy+=0.12*S; p.vx*=0.98; p.life-=0.03; }
+      particles=particles.filter(p=>p.life>0);
+      for(const f of feathers){ f.x+=f.vx; f.y+=f.vy; f.vy+=0.16*S; f.vx*=0.99; f.rot+=f.vr; f.life-=0.012; }
+      feathers=feathers.filter(f=>f.life>0 && f.y<H+40);
+
+      if(mode==='dead'){
+        // bird tumbles to the ground after death
+        bird.vy=Math.min(MAXFALL*1.4, bird.vy+GRAV*1.3);
+        bird.y=Math.min(groundY()-BIRD_R, bird.y+bird.vy);
+        bird.a=Math.min(Math.PI/2, bird.a+0.12);
+        if(t>=deadShowAt) document.getElementById('over').classList.add('gx-show');
+        return;
+      }
+
+      if(mode==='ready'){
+        // gentle bob while waiting for the first flap
+        bird.y = H*0.42 + Math.sin(t/22)*8*S;
+        bird.a = Math.sin(t/22)*0.12;
+        return;
+      }
+
+      // ---- play physics ----
+      bird.vy=Math.min(MAXFALL, bird.vy+GRAV);
+      bird.y+=bird.vy;
+      if(bird.flapT>0) bird.flapT--;
+      // tilt: up when rising, dives nose-down when falling
+      const targetA = bird.vy<0 ? -0.5 : clamp(bird.vy/MAXFALL,0,1)*1.15;
+      bird.a += (targetA-bird.a)*0.18;
+
+      // ceiling
+      if(bird.y<BIRD_R){ bird.y=BIRD_R; bird.vy=0; }
+      // ground = death
+      if(bird.y>=groundY()-BIRD_R){ bird.y=groundY()-BIRD_R; return die(); }
+
+      // scroll pipes
+      const bx=birdX();
+      for(const p of pipes){
+        p.x-=SPEED;
+        // scoring: count when bird's x passes the pipe center
+        if(!p.passed && p.x+PIPE_W/2 < bx){ p.passed=true; score++; updateHud();
+          burst(bx, p.gy, 6, [AMBER,'#ffd27a']); }
+      }
+      // recycle: drop off-screen pipes, append new ones to keep the field full
+      if(pipes.length && pipes[0].x < -PIPE_W){ pipes.shift();
+        const lastX=pipes[pipes.length-1].x;
+        pipes.push(makePipe(lastX+SPACING)); }
+
+      // ---- collision (circle vs pipe rects) ----
+      for(const p of pipes){
+        if(bx+BIRD_R < p.x || bx-BIRD_R > p.x+PIPE_W) continue; // horizontally clear
+        const topH=p.gy-GAP/2, botY=p.gy+GAP/2;
+        // top pipe rect: [p.x..p.x+PIPE_W] x [0..topH]
+        if(circleRect(bx,bird.y,BIRD_R*0.86, p.x,0,PIPE_W,topH) ||
+           circleRect(bx,bird.y,BIRD_R*0.86, p.x,botY,PIPE_W,groundY()-botY)){
+          return die();
+        }
+      }
+    }
+
+    function circleRect(cx,cy,r, rx,ry,rw,rh){
+      const nx=clamp(cx,rx,rx+rw), ny=clamp(cy,ry,ry+rh);
+      const dx=cx-nx, dy=cy-ny; return dx*dx+dy*dy < r*r;
+    }
+
+    // ---------- render ----------
+    function roundRect(x,y,w,h,r){ r=Math.min(r,w/2,h/2);
+      ctx.beginPath();
+      ctx.moveTo(x+r,y); ctx.arcTo(x+w,y,x+w,y+h,r); ctx.arcTo(x+w,y+h,x,y+h,r);
+      ctx.arcTo(x,y+h,x,y,r); ctx.arcTo(x,y,x+w,y,r); ctx.closePath();
+    }
+
+    function drawBackground(){
+      // warm near-black sky with a soft top glow
+      const g=ctx.createLinearGradient(0,0,0,H);
+      g.addColorStop(0,'#1c1510'); g.addColorStop(0.55,BG); g.addColorStop(1,SCREEN);
+      ctx.fillStyle=g; ctx.fillRect(0,0,W,H);
+
+      // distant amber "arcade sun" disc
+      const sunX=W*0.5, sunY=H*0.30, sunR=Math.min(W,H)*0.22;
+      const sg=ctx.createRadialGradient(sunX,sunY,0,sunX,sunY,sunR);
+      sg.addColorStop(0,'rgba(232,162,58,0.16)'); sg.addColorStop(1,'rgba(232,162,58,0)');
+      ctx.fillStyle=sg; ctx.beginPath(); ctx.arc(sunX,sunY,sunR,0,TAU); ctx.fill();
+
+      // parallax dune silhouettes (deterministic, scroll with world)
+      drawDunes(0.18, '#241a12', H*0.62, 70);
+      drawDunes(0.35, '#1d1510', H*0.70, 46);
+    }
+
+    function drawDunes(par, color, baseY, amp){
+      const off=(t*SPEED*par)% (W);
+      ctx.fillStyle=color;
+      ctx.beginPath();
+      ctx.moveTo(0,H);
+      const step=W/8;
+      for(let i=-1;i<=9;i++){
+        const x=i*step - (off%step);
+        const y=baseY + Math.sin((i*1.7) + t*0.003*par*10)*amp*S*0.4
+                + Math.sin(i*0.6)*amp*S*0.5;
+        ctx.lineTo(x,y);
+      }
+      ctx.lineTo(W,H); ctx.closePath(); ctx.fill();
+    }
+
+    function drawPipe(p){
+      const gy=p.gy, topH=gy-GAP/2, botY=gy+GAP/2;
+      const capH=Math.max(16, 18*S), capOver=Math.max(6,7*S);
+      const x=p.x, w=PIPE_W;
+
+      function body(y,h){
+        if(h<=0) return;
+        // pipe gradient (amber-to-deep), then a red rim like the cabinet accents
+        const g=ctx.createLinearGradient(x,0,x+w,0);
+        g.addColorStop(0,'#a55b1f'); g.addColorStop(0.18,AMBER);
+        g.addColorStop(0.55,'#c47e2c'); g.addColorStop(1,'#7a4316');
+        ctx.fillStyle=g;
+        ctx.fillRect(x,y,w,h);
+        // inner highlight stripe
+        ctx.fillStyle='rgba(255,233,190,0.22)';
+        ctx.fillRect(x+w*0.16, y, w*0.10, h);
+        // dark edge
+        ctx.fillStyle='rgba(10,8,6,0.35)';
+        ctx.fillRect(x+w-Math.max(3,4*S), y, Math.max(3,4*S), h);
+      }
+      // top pipe (body from 0..topH) and its cap
+      body(0, topH);
+      body(botY, groundY()-botY);
+
+      // caps (red-rimmed amber blocks with hard ink shadow vibe)
+      function cap(cy){
+        const cx=x-capOver, cw=w+capOver*2;
+        const g=ctx.createLinearGradient(cx,0,cx+cw,0);
+        g.addColorStop(0,'#b9641f'); g.addColorStop(0.5,AMBER); g.addColorStop(1,'#8a4c18');
+        ctx.fillStyle=g; roundRect(cx,cy,cw,capH,Math.max(2,3*S)); ctx.fill();
+        ctx.fillStyle=RED; ctx.fillRect(cx, cy, cw, Math.max(2,3*S));      // top accent line
+        ctx.fillStyle='rgba(10,8,6,0.4)'; ctx.fillRect(cx, cy+capH-Math.max(2,3*S), cw, Math.max(2,3*S));
+      }
+      cap(topH-capH);   // bottom of the top pipe
+      cap(botY);        // top of the bottom pipe
+    }
+
+    function drawGround(){
+      const gyv=groundY();
+      // ground slab
+      ctx.fillStyle='#241a12'; ctx.fillRect(0,gyv,W,GROUND);
+      // red accent strip along the top (cabinet bar)
+      ctx.fillStyle=RED; ctx.fillRect(0,gyv,W,Math.max(3,3*S));
+      ctx.fillStyle='rgba(232,162,58,0.55)'; ctx.fillRect(0,gyv+Math.max(3,3*S),W,Math.max(1,2*S));
+      // scrolling diagonal hash texture (deterministic)
+      ctx.save();
+      ctx.beginPath(); ctx.rect(0,gyv+5*S,W,GROUND); ctx.clip();
+      ctx.strokeStyle='rgba(10,8,6,0.5)'; ctx.lineWidth=Math.max(2,3*S);
+      const sp=26*S, off=(t*SPEED)%(sp);
+      for(let x=-GROUND-off; x<W+sp; x+=sp){
+        ctx.beginPath(); ctx.moveTo(x,gyv+GROUND); ctx.lineTo(x+GROUND,gyv+5*S); ctx.stroke();
+      }
+      ctx.restore();
+    }
+
+    function drawBird(){
+      const bx=birdX();
+      ctx.save();
+      ctx.translate(bx,bird.y); ctx.rotate(bird.a);
+      const r=BIRD_R;
+      // hard offset shadow (matches the no-blur arcade look)
+      ctx.fillStyle='rgba(10,8,6,0.55)';
+      ctx.beginPath(); ctx.ellipse(3*S,4*S,r,r*0.92,0,0,TAU); ctx.fill();
+      // body
+      const g=ctx.createLinearGradient(-r,-r,r,r);
+      g.addColorStop(0,'#f3c14a'); g.addColorStop(1,AMBER);
+      ctx.fillStyle=g;
+      ctx.beginPath(); ctx.ellipse(0,0,r,r*0.92,0,0,TAU); ctx.fill();
+      ctx.lineWidth=Math.max(2,2.4*S); ctx.strokeStyle=INK; ctx.stroke();
+
+      // wing (flaps on input)
+      const wf = bird.flapT>0 ? -0.8 : Math.sin(t/6)*0.25;
+      ctx.save(); ctx.translate(-r*0.15, r*0.05); ctx.rotate(wf);
+      ctx.fillStyle=RED;
+      ctx.beginPath(); ctx.ellipse(-r*0.2, r*0.05, r*0.62, r*0.4, 0, 0, TAU); ctx.fill();
+      ctx.lineWidth=Math.max(1.5,2*S); ctx.strokeStyle=INK; ctx.stroke();
+      ctx.restore();
+
+      // belly highlight
+      ctx.fillStyle='rgba(255,237,225,0.5)';
+      ctx.beginPath(); ctx.ellipse(r*0.1, r*0.35, r*0.5, r*0.32, 0, 0, TAU); ctx.fill();
+
+      // beak
+      ctx.fillStyle=RED;
+      ctx.beginPath();
+      ctx.moveTo(r*0.78,-r*0.12); ctx.lineTo(r*1.42,0); ctx.lineTo(r*0.78,r*0.18); ctx.closePath();
+      ctx.fill(); ctx.lineWidth=Math.max(1.2,1.6*S); ctx.strokeStyle=INK; ctx.stroke();
+
+      // eye
+      ctx.fillStyle=BONE; ctx.beginPath(); ctx.arc(r*0.42,-r*0.3,r*0.3,0,TAU); ctx.fill();
+      ctx.fillStyle=INK; ctx.beginPath(); ctx.arc(r*0.50,-r*0.3,r*0.14,0,TAU); ctx.fill();
+      ctx.restore();
+    }
+
+    function drawParticles(){
+      for(const p of particles){ ctx.globalAlpha=Math.max(0,p.life);
+        ctx.fillStyle=p.c; ctx.beginPath();
+        ctx.arc(p.x,p.y,p.r*Math.max(0.3,p.life),0,TAU); ctx.fill(); }
+      ctx.globalAlpha=1;
+      for(const f of feathers){ ctx.save(); ctx.globalAlpha=Math.max(0,f.life);
+        ctx.translate(f.x,f.y); ctx.rotate(f.rot); ctx.fillStyle=AMBER;
+        ctx.beginPath(); ctx.ellipse(0,0,f.s,f.s*0.4,0,0,TAU); ctx.fill();
+        ctx.strokeStyle=INK; ctx.lineWidth=1*S; ctx.stroke(); ctx.restore(); }
+      ctx.globalAlpha=1;
+    }
+
+    // big centered score while playing
+    function drawScore(){
+      if(mode==='dead') return;
+      ctx.save();
+      ctx.textAlign='center'; ctx.textBaseline='top';
+      ctx.font=`${Math.round(64*S)}px 'Anton', system-ui, sans-serif`;
+      const sy=Math.max(58, H*0.10);
+      ctx.fillStyle=INK; ctx.fillText(score, W/2+3*S, sy+3*S);     // hard shadow
+      ctx.fillStyle=BONE; ctx.fillText(score, W/2, sy);
+      ctx.restore();
+    }
+
+    function drawAttract(){
+      if(mode!=='ready') return;
+      ctx.save();
+      ctx.textAlign='center';
+      // title
+      ctx.font=`${Math.round(52*S)}px 'Anton', system-ui, sans-serif`;
+      ctx.fillStyle=INK; ctx.fillText('FLAPPY', W/2+3*S, H*0.24+3*S);
+      ctx.fillStyle=RED;  ctx.fillText('FLAPPY', W/2, H*0.24);
+      // blinking prompt
+      if(Math.floor(t/26)%2===0){
+        ctx.font=`700 ${Math.round(15*S)}px 'Space Mono', monospace`;
+        ctx.fillStyle=AMBER;
+        ctx.fillText('TAP  ·  SPACE  ·  ↑   TO FLAP', W/2, H*0.62);
+      }
+      ctx.restore();
+    }
+
+    function render(){
+      ctx.save();
+      if(shakeT>0){ const m=shakeT*7*S; ctx.translate(rng(-m,m),rng(-m,m)); }
+
+      drawBackground();
+      pipes.forEach(drawPipe);
+      drawGround();
+      drawParticles();
+      if(bird) drawBird();
+      drawScore();
+      drawAttract();
+
+      ctx.restore();
+
+      // CRT-ish scanlines for the cabinet feel (cheap, deterministic)
+      ctx.globalAlpha=0.06; ctx.fillStyle='#000';
+      for(let y=0;y<H;y+=3) ctx.fillRect(0,y,W,1);
+      ctx.globalAlpha=1;
+
+      // death flash
+      if(flashT>0){ ctx.globalAlpha=flashT*0.5; ctx.fillStyle=RED; ctx.fillRect(0,0,W,H); ctx.globalAlpha=1; }
+    }
+
+    function frame(){
+      if(!paused) update();
+      render();
+      requestAnimationFrame(frame);
+    }
+
+    start(); frame();
+  </script>
+</body>
+</html>

@@ -9,7 +9,12 @@
       "icon": "🪨",
       "color": "#ff7a6c",
       "dims": "2D",
-      "tags": ["rotate", "thrust", "shoot", "classic"],
+      "tags": [
+        "rotate",
+        "thrust",
+        "shoot",
+        "classic"
+      ],
       "license": "MIT",
       "credit": "Gamf original"
     },
@@ -19,7 +24,11 @@
       "path": "games/breakout/",
       "icon": "🧱",
       "dims": "2D",
-      "tags": ["drag", "arrows", "classic"],
+      "tags": [
+        "drag",
+        "arrows",
+        "classic"
+      ],
       "license": "MIT",
       "credit": "Gamf · classic Breakout design"
     },
@@ -29,7 +38,11 @@
       "path": "games/snake/",
       "icon": "🐍",
       "dims": "2D",
-      "tags": ["swipe", "arrows", "classic"],
+      "tags": [
+        "swipe",
+        "arrows",
+        "classic"
+      ],
       "license": "MIT",
       "credit": "Gamf · classic Snake design"
     },
@@ -40,7 +53,108 @@
       "icon": "👾",
       "color": "#36e0c2",
       "dims": "2D",
-      "tags": ["shoot", "drag", "arrows", "waves"],
+      "tags": [
+        "shoot",
+        "drag",
+        "arrows",
+        "waves"
+      ],
+      "license": "MIT",
+      "credit": "Gamf original"
+    },
+    {
+      "slug": "pong",
+      "title": "Pong",
+      "path": "games/pong/",
+      "icon": "🏓",
+      "color": "#ff7a6c",
+      "dims": "2D",
+      "tags": [
+        "paddle",
+        "ai",
+        "retro",
+        "1v1"
+      ],
+      "license": "MIT",
+      "credit": "Gamf original"
+    },
+    {
+      "slug": "frogger",
+      "title": "Frogger",
+      "path": "games/frogger/",
+      "icon": "🐸",
+      "color": "#ff7a6c",
+      "dims": "2D",
+      "tags": [
+        "hop",
+        "traffic",
+        "river",
+        "retro"
+      ],
+      "license": "MIT",
+      "credit": "Gamf original"
+    },
+    {
+      "slug": "sky-hop",
+      "title": "Sky Hop",
+      "path": "games/sky-hop/",
+      "icon": "🦘",
+      "color": "#ff7a6c",
+      "dims": "2D",
+      "tags": [
+        "doodle-jump",
+        "platformer",
+        "endless",
+        "vertical"
+      ],
+      "license": "MIT",
+      "credit": "Gamf original"
+    },
+    {
+      "slug": "flappy",
+      "title": "Flappy",
+      "path": "games/flappy/",
+      "icon": "🐤",
+      "color": "#ff7a6c",
+      "dims": "2D",
+      "tags": [
+        "one-button",
+        "flapper",
+        "endless",
+        "reflex"
+      ],
+      "license": "MIT",
+      "credit": "Gamf original"
+    },
+    {
+      "slug": "missile",
+      "title": "Missile Command",
+      "path": "games/missile/",
+      "icon": "🚀",
+      "color": "#ff7a6c",
+      "dims": "2D",
+      "tags": [
+        "defense",
+        "shooter",
+        "retro",
+        "reflex"
+      ],
+      "license": "MIT",
+      "credit": "Gamf original"
+    },
+    {
+      "slug": "galaxia",
+      "title": "Galaxia",
+      "path": "games/galaxia/",
+      "icon": "👾",
+      "color": "#ff7a6c",
+      "dims": "2D",
+      "tags": [
+        "shooter",
+        "galaga",
+        "waves",
+        "retro"
+      ],
       "license": "MIT",
       "credit": "Gamf original"
     }
