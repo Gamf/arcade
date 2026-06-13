@@ -32,6 +32,7 @@
     <span class="gx-hud__spacer"></span>
     <span class="gx-pill gx-pill--best"><svg class="gx-ico" style="width:1em;height:1em"><use href="#i-trophy"/></svg> <b id="best">0</b></span>
     <span class="gx-pill">Score <b id="score">0</b></span>
+    <button class="gx-help__open" id="gxHelpOpen" aria-label="How to play"><svg class="gx-ico"><use href="#i-info"/></svg></button>
   </div>
 
   <!-- Controls hint (design system) -->
@@ -58,6 +59,21 @@
       <h2 class="gx-modal__title">Paused</h2>
       <div class="gx-modal__row">Score <b id="pauseScore">0</b></div>
       <button class="gx-btn gx-btn--primary" id="resume"><svg class="gx-ico"><use href="#i-play"/></svg> Resume</button>
+    </div>
+  </div>
+
+  <!-- How-to-play overlay (design system) -->
+  <div class="gx-modal" id="gxHelp">
+    <div class="gx-modal__card">
+      <div class="gx-modal__title">HOW TO PLAY</div>
+      <p class="gx-help__obj">Flap to fly the bird through the gaps between pipes without hitting a pipe, the ground or the ceiling.</p>
+      <ul class="gx-help__list">
+        <li><b>Tap / Space / ↑</b> <span>Flap</span></li>
+        <li><b>Swipe down / ↓</b> <span>Dive faster</span></li>
+        <li><b>P</b> <span>Pause</span></li>
+        <li><b>R</b> <span>Restart</span></li>
+      </ul>
+      <button class="gx-btn gx-btn--primary" id="gxHelpClose">Got it</button>
     </div>
   </div>
 
@@ -203,6 +219,11 @@
     // ---------- input: KEYBOARD ----------
     addEventListener('keydown', e=>{
       const k=e.key.length===1?e.key.toLowerCase():e.key;
+      // while the how-to-play overlay is up, swallow game keys; let Space/Enter/Esc close it
+      if(helpEl.classList.contains('gx-show')){
+        if(k===' '||k==='Enter'||k==='Escape'){ e.preventDefault(); hideHelp(); }
+        return;
+      }
       if(k===' '||k==='Enter'||k==='ArrowUp'||k==='w'){
         e.preventDefault();
         if(mode==='dead'){ if(t>=deadShowAt) start(); return; }
@@ -231,6 +252,27 @@
 
     document.getElementById('again').onclick=start;
     document.getElementById('resume').onclick=()=>togglePause(false);
+
+    // ---------- How-to-play overlay ----------
+    const SEEN_KEY='gamf-seen-arcade-'+SLUG;
+    const helpEl=document.getElementById('gxHelp');
+    let helpWasPlaying=false;
+    function showHelp(){
+      // freeze live play while the overlay is up (set the flag directly so the
+      // separate Paused card doesn't stack underneath the help modal)
+      helpWasPlaying = (mode==='play' && !paused);
+      if(helpWasPlaying) paused=true;
+      helpEl.classList.add('gx-show');
+    }
+    function hideHelp(){
+      helpEl.classList.remove('gx-show');
+      if(helpWasPlaying){ paused=false; helpWasPlaying=false; }
+    }
+    document.getElementById('gxHelpOpen').onclick=showHelp;
+    document.getElementById('gxHelpClose').onclick=hideHelp;
+    helpEl.addEventListener('click', e=>{ if(e.target===helpEl) hideHelp(); });
+    // auto-show once on first visit
+    if(!localStorage.getItem(SEEN_KEY)){ helpEl.classList.add('gx-show'); localStorage.setItem(SEEN_KEY,'1'); }
 
     // ---------- update ----------
     function update(){

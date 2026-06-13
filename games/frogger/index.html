@@ -30,6 +30,7 @@
     <span class="gx-pill gx-pill--best"><svg class="gx-ico" style="width:1em;height:1em"><use href="#i-trophy"/></svg> <b id="best">0</b></span>
     <span class="gx-pill">Score <b id="score">0</b></span>
     <span class="gx-pill">Lives <b id="lives">3</b></span>
+    <button class="gx-help__open" id="gxHelpOpen" aria-label="How to play"><svg class="gx-ico"><use href="#i-info"/></svg></button>
   </div>
   <div class="wrap">
     <canvas id="c"></canvas>
@@ -52,6 +53,20 @@
       <div class="gx-modal__row">Best <b id="finalBest">0</b></div>
       <div class="gx-modal__new" id="newBest"></div>
       <button class="gx-btn gx-btn--primary" id="again"><svg class="gx-ico"><use href="#i-restart"/></svg> Play again</button>
+    </div>
+  </div>
+  <div class="gx-modal" id="gxHelp">
+    <div class="gx-modal__card">
+      <div class="gx-modal__title">How to Play</div>
+      <p class="gx-help__obj">Hop your frog across the road and river to fill all five goal slots at the top without getting hit, drowning, or running out of lives.</p>
+      <ul class="gx-help__list">
+        <li><b>Swipe / Arrows</b><span>Hop</span></li>
+        <li><b>WASD</b><span>Hop</span></li>
+        <li><b>Tap / Space</b><span>Restart when game over</span></li>
+        <li><b>P</b><span>Pause</span></li>
+        <li><b>R</b><span>Restart</span></li>
+      </ul>
+      <button class="gx-btn gx-btn--primary" id="gxHelpClose">Got it</button>
     </div>
   </div>
   <script type="module">
@@ -155,7 +170,8 @@
     // 5 goal slots centred over the goal row
     const goalCols=[1,4,6,8,11];
     function goalSlotAt(col){
-      for(let g=0;g<goalCols.length;g++) if(Math.abs(col-goalCols[g])<=0) return g;
+      const c=Math.round(col);
+      for(let g=0;g<goalCols.length;g++) if(c===goalCols[g]) return g;
       return -1;
     }
 
@@ -371,8 +387,23 @@
     $('again').onclick=reset;
     $('resume').onclick=()=>togglePause(false);
 
+    // How-to-play overlay
+    const SEEN_KEY='gamf-seen-arcade-'+SLUG;
+    const help=$('gxHelp');
+    let resumeOnHelpClose=false;
+    // pause via the flag directly (not togglePause) so the help modal doesn't
+    // stack on top of the #paused modal.
+    function showHelp(){ resumeOnHelpClose=alive&&!paused; if(resumeOnHelpClose) paused=true;
+      help.classList.add('gx-show'); }
+    function hideHelp(){ help.classList.remove('gx-show');
+      if(resumeOnHelpClose) paused=false; resumeOnHelpClose=false; }
+    $('gxHelpOpen').onclick=showHelp;
+    $('gxHelpClose').onclick=hideHelp;
+    help.addEventListener('click',e=>{ if(e.target===help) hideHelp(); });
+
     reset();
     requestAnimationFrame(loop);
+    if(!localStorage.getItem(SEEN_KEY)){ showHelp(); localStorage.setItem(SEEN_KEY,'1'); }
   </script>
 </body>
 </html>

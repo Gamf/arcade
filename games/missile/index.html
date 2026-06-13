@@ -32,6 +32,7 @@
     <span class="gx-pill" id="citiesPill">Cities <b id="cities">▮▮▮▮▮▮</b></span>
     <span class="gx-pill gx-pill--best"><svg class="gx-ico" style="width:1em;height:1em"><use href="#i-trophy"/></svg> <b id="best">0</b></span>
     <span class="gx-pill">Score <b id="score">0</b></span>
+    <button class="gx-help__open" id="gxHelpOpen" aria-label="How to play"><svg class="gx-ico"><use href="#i-info"/></svg></button>
   </div>
 
   <!-- Controls hint (design system) -->
@@ -57,6 +58,22 @@
       <h2 class="gx-modal__title">Paused</h2>
       <div class="gx-modal__row">Score <b id="pauseScore">0</b></div>
       <button class="gx-btn gx-btn--primary" id="resume"><svg class="gx-ico"><use href="#i-play"/></svg> Resume</button>
+    </div>
+  </div>
+
+  <!-- How to play (design system) -->
+  <div class="gx-modal" id="gxHelp">
+    <div class="gx-modal__card">
+      <div class="gx-modal__title">How to Play</div>
+      <p class="gx-help__obj">Defend your six cities by intercepting incoming enemy missiles before they hit the ground.</p>
+      <ul class="gx-help__list">
+        <li><b>Tap sky / Space</b><span>Fire interceptor</span></li>
+        <li><b>← → / A D</b><span>Aim turret</span></li>
+        <li><b>↑ / W</b><span>Aim straight up</span></li>
+        <li><b>P</b><span>Pause</span></li>
+        <li><b>R</b><span>Restart</span></li>
+      </ul>
+      <button class="gx-btn gx-btn--primary" id="gxHelpClose">Got it</button>
     </div>
   </div>
 
@@ -253,6 +270,23 @@
     document.getElementById('again').onclick=start;
     document.getElementById('resume').onclick=()=>togglePause(false);
 
+    // ---------- How to play overlay ----------
+    const SEEN_KEY='gamf-seen-arcade-'+SLUG;
+    const helpEl=document.getElementById('gxHelp');
+    let helpPausedByUs=false;
+    function openHelp(){
+      // freeze gameplay while reading (without showing the Paused card)
+      if(aliveGame && !paused){ paused=true; helpPausedByUs=true; }
+      helpEl.classList.add('gx-show');
+    }
+    function closeHelp(){
+      helpEl.classList.remove('gx-show');
+      if(helpPausedByUs){ paused=false; helpPausedByUs=false; }
+    }
+    document.getElementById('gxHelpOpen').onclick=openHelp;
+    document.getElementById('gxHelpClose').onclick=closeHelp;
+    helpEl.addEventListener('click',e=>{ if(e.target===helpEl) closeHelp(); });
+
     // ---------- update ----------
     function update(){
       t++;
@@ -404,15 +438,19 @@
     }
 
     function render(){
+      // clear every frame (defensive — fills below cover the visible area,
+      // but this guarantees no smearing under heavy screen-shake)
+      ctx.clearRect(0,0,W,H);
+
       // shake offset
       let sx=0, sy=0;
       if(shakeT>0){ const m=shakeT*0.5; sx=(rnd()*2-1)*m; sy=(rnd()*2-1)*m; }
       ctx.save(); ctx.translate(sx,sy);
 
-      // sky gradient
+      // sky gradient (over-draw past edges so shake never reveals the clear)
       const g=ctx.createLinearGradient(0,0,0,groundY);
       g.addColorStop(0,'#1d140d'); g.addColorStop(1,BG);
-      ctx.fillStyle=g; ctx.fillRect(-8,-8,W+16,groundY+16);
+      ctx.fillStyle=g; ctx.fillRect(-24,-24,W+48,groundY+48);
 
       // stars (deterministic, gentle twinkle)
       let s3=0x2545F491;
@@ -424,8 +462,8 @@
       ctx.globalAlpha=1;
 
       // ground
-      ctx.fillStyle=GROUND; ctx.fillRect(-8,groundY,W+16,H-groundY+16);
-      ctx.fillStyle=LINE; ctx.fillRect(-8,groundY,W+16,2);
+      ctx.fillStyle=GROUND; ctx.fillRect(-24,groundY,W+48,H-groundY+48);
+      ctx.fillStyle=LINE; ctx.fillRect(-24,groundY,W+48,2);
 
       // enemy missile trails
       for(const en of enemies){
@@ -509,6 +547,9 @@
     }
 
     resize(); start(); frame();
+
+    // first-visit help (after start(), which resets the pause flag)
+    if(!localStorage.getItem(SEEN_KEY)){ openHelp(); localStorage.setItem(SEEN_KEY,'1'); }
   </script>
 </body>
 </html>

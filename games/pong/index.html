@@ -24,6 +24,7 @@
     <span class="gx-pill">You <b id="you">0</b></span>
     <span class="gx-pill">CPU <b id="cpu">0</b></span>
     <span class="gx-pill gx-pill--best"><svg class="gx-ico" style="width:1em;height:1em"><use href="#i-trophy"/></svg> <b id="best">0</b></span>
+    <button class="gx-help__open" id="gxHelpOpen" aria-label="How to play"><svg class="gx-ico"><use href="#i-info"/></svg></button>
   </div>
   <canvas id="c"></canvas>
   <div class="gx-hint" id="hint">
@@ -45,6 +46,19 @@
       <div class="gx-modal__row">Wins <b id="finalWins">0</b></div>
       <div class="gx-modal__new" id="newBest"></div>
       <button class="gx-btn gx-btn--primary" id="again"><svg class="gx-ico"><use href="#i-restart"/></svg> Play again</button>
+    </div>
+  </div>
+  <div class="gx-modal" id="gxHelp">
+    <div class="gx-modal__card">
+      <div class="gx-modal__title">How to Play</div>
+      <p class="gx-help__obj">Beat the CPU to 7 points by sending the ball past its paddle without letting it get past yours.</p>
+      <ul class="gx-help__list">
+        <li><b>Drag / ↑ ↓ / W S</b><span>Move paddle</span></li>
+        <li><b>Tap / Space</b><span>Serve</span></li>
+        <li><b>P</b><span>Pause</span></li>
+        <li><b>R</b><span>Restart</span></li>
+      </ul>
+      <button class="gx-btn gx-btn--primary" id="gxHelpClose">Got it</button>
     </div>
   </div>
   <script type="module">
@@ -273,7 +287,21 @@
       ctx.restore();
     }
 
+    // How-to-play overlay
+    const SEEN_KEY='gamf-seen-arcade-'+SLUG;
+    const helpEl=document.getElementById('gxHelp');
+    let pausedByHelp=false;
+    function showHelp(){ if(alive && !paused){ pausedByHelp=true; paused=true; }
+      helpEl.classList.add('gx-show'); }
+    function hideHelp(){ helpEl.classList.remove('gx-show');
+      if(pausedByHelp){ pausedByHelp=false; paused=false; } }
+    document.getElementById('gxHelpOpen').onclick=showHelp;
+    document.getElementById('gxHelpClose').onclick=hideHelp;
+    helpEl.addEventListener('click', e=>{ if(e.target===helpEl) hideHelp(); });
+
     resize(); startGame(); frame();
+
+    if(!localStorage.getItem(SEEN_KEY)){ localStorage.setItem(SEEN_KEY,'1'); showHelp(); }
   </script>
 </body>
 </html>

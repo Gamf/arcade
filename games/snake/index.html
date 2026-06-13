@@ -26,6 +26,7 @@
     <span class="gx-hud__spacer"></span>
     <span class="gx-pill gx-pill--best"><svg class="gx-ico" style="width:1em;height:1em"><use href="#i-trophy"/></svg> <b id="best">0</b></span>
     <span class="gx-pill">Score <b id="score">0</b></span>
+    <button class="gx-help__open" id="gxHelpOpen" aria-label="How to play"><svg class="gx-ico"><use href="#i-info"/></svg></button>
   </div>
   <div class="wrap">
     <canvas id="c"></canvas>
@@ -46,7 +47,22 @@
       <h2 class="gx-modal__title">Game Over</h2>
       <div class="gx-modal__row">Score <b id="finalScore">0</b></div>
       <div class="gx-modal__row">Best <b id="finalBest">0</b></div>
+      <div class="gx-modal__new" id="newBest"></div>
       <button class="gx-btn gx-btn--primary" id="again"><svg class="gx-ico"><use href="#i-restart"/></svg> Play again</button>
+    </div>
+  </div>
+  <div class="gx-modal" id="gxHelp">
+    <div class="gx-modal__card">
+      <div class="gx-modal__title">How to Play</div>
+      <p class="gx-help__obj">Steer the snake to eat food and grow as long as you can — don't hit the walls or your own tail.</p>
+      <ul class="gx-help__list">
+        <li><b>Swipe / Arrows</b><span>Move</span></li>
+        <li><b>WASD</b><span>Move</span></li>
+        <li><b>Tap / Space</b><span>Restart when game over</span></li>
+        <li><b>P</b><span>Pause</span></li>
+        <li><b>R</b><span>Restart</span></li>
+      </ul>
+      <button class="gx-btn gx-btn--primary" id="gxHelpClose">Got it</button>
     </div>
   </div>
   <script type="module">
@@ -85,8 +101,9 @@
       paused=(force===undefined)?!paused:force;
       document.getElementById('paused').classList.toggle('gx-show',paused); }
 
+    let helpOpen=false;
     function setDir(nx,ny){ if(nx===-dir.x&&ny===-dir.y) return; nextDir={x:nx,y:ny}; }
-    function tick(){ if(!alive||paused) return; dir=nextDir;
+    function tick(){ if(!alive||paused||helpOpen) return; dir=nextDir;
       const head={x:snake[0].x+dir.x, y:snake[0].y+dir.y};
       if(head.x<0||head.x>=N||head.y<0||head.y>=N||snake.some(s=>s.x===head.x&&s.y===head.y)){
         burst((head.x+.5)*cell,(head.y+.5)*cell,'#ff7a6c',22); return end(); }
@@ -126,10 +143,12 @@
       particles=particles.filter(p=>p.life>0);
       draw(); requestAnimationFrame(loop); }
 
-    function end(){ alive=false; clearInterval(timer);
-      if(score>best){ best=score; localStorage.setItem(BEST_KEY,best); document.getElementById('best').textContent=best; }
+    function end(){ alive=false; paused=false; clearInterval(timer);
+      const isNew=score>best;
+      if(isNew){ best=score; localStorage.setItem(BEST_KEY,best); document.getElementById('best').textContent=best; }
       document.getElementById('finalScore').textContent=score;
       document.getElementById('finalBest').textContent=best;
+      document.getElementById('newBest').textContent=isNew?'★ New best!':'';
       document.getElementById('over').classList.add('gx-show'); }
 
     onSwipe(canvas,(d)=>{ if(d==='left')setDir(-1,0); else if(d==='right')setDir(1,0);
@@ -144,7 +163,18 @@
       if((k===' '||k==='Enter')&&!alive){ e.preventDefault(); reset(); } });
     document.getElementById('again').onclick=reset;
     document.getElementById('resume').onclick=()=>togglePause(false);
+
+    // How-to-play overlay (freezes the snake while open, without the pause modal)
+    const SEEN_KEY='gamf-seen-arcade-'+SLUG;
+    const help=document.getElementById('gxHelp');
+    function showHelp(){ helpOpen=true; help.classList.add('gx-show'); }
+    function hideHelp(){ helpOpen=false; help.classList.remove('gx-show'); }
+    document.getElementById('gxHelpOpen').onclick=showHelp;
+    document.getElementById('gxHelpClose').onclick=hideHelp;
+    help.addEventListener('click',e=>{ if(e.target===help) hideHelp(); });
+
     reset(); loop();
+    if(!localStorage.getItem(SEEN_KEY)){ showHelp(); localStorage.setItem(SEEN_KEY,'1'); }
   </script>
 </body>
 </html>

@@ -30,6 +30,7 @@
     <span class="gx-pill">Wave <b id="wave">1</b></span>
     <span class="gx-pill gx-pill--best"><svg class="gx-ico" style="width:1em;height:1em"><use href="#i-trophy"/></svg> <b id="best">0</b></span>
     <span class="gx-pill">Score <b id="score">0</b></span>
+    <button class="gx-help__open" id="gxHelpOpen" aria-label="How to play"><svg class="gx-ico"><use href="#i-info"/></svg></button>
   </div>
   <div class="wrap">
     <canvas id="c"></canvas>
@@ -38,6 +39,19 @@
     <span class="gx-hint__chip"><svg class="gx-ico"><use href="#i-target"/></svg> drag to move · tap to fire</span>
     <span class="gx-hint__chip"><svg class="gx-ico"><use href="#i-bolt"/></svg> arrows / WASD · space fire</span>
     <span class="gx-hint__chip"><svg class="gx-ico"><use href="#i-pause"/></svg> P pause · R restart</span>
+  </div>
+  <div class="gx-modal" id="gxHelp">
+    <div class="gx-modal__card">
+      <div class="gx-modal__title">How to Play</div>
+      <p class="gx-help__obj">Pilot your ship, blast the swooping alien formation, and dodge their dive-bombs to survive each wave.</p>
+      <ul class="gx-help__list">
+        <li><b>Drag / Arrows / A D</b> <span>Move ship</span></li>
+        <li><b>Tap / Space</b> <span>Fire</span></li>
+        <li><b>P</b> <span>Pause</span></li>
+        <li><b>R</b> <span>Restart</span></li>
+      </ul>
+      <button class="gx-btn gx-btn--primary" id="gxHelpClose">Got it</button>
+    </div>
   </div>
   <div class="gx-modal" id="paused">
     <div class="gx-modal__card">
@@ -476,6 +490,12 @@
     // ---- input: keyboard ----
     addEventListener('keydown',e=>{
       const k=e.key.length===1?e.key.toLowerCase():e.key;
+      // while help overlay is open, swallow game keys (Space/Enter dismisses it)
+      if(helpEl.classList.contains('gx-show')){
+        e.preventDefault();
+        if(k===' '||k==='Enter') hideHelp();
+        return;
+      }
       if(k==='ArrowLeft'||k==='a'){ keys.left=true; e.preventDefault(); return; }
       if(k==='ArrowRight'||k==='d'){ keys.right=true; e.preventDefault(); return; }
       if(k===' '||k==='Enter'){
@@ -508,7 +528,28 @@
     document.getElementById('again').onclick=reset;
     document.getElementById('resume').onclick=()=>togglePause(false);
 
+    // ---- how-to-play overlay ----
+    const helpEl=document.getElementById('gxHelp');
+    const SEEN_KEY='gamf-seen-arcade-'+SLUG;
+    let helpWasPaused=false;
+    function showHelp(){
+      helpWasPaused=paused;
+      if(alive) togglePause(true);
+      helpEl.classList.add('gx-show');
+    }
+    function hideHelp(){
+      helpEl.classList.remove('gx-show');
+      if(alive && !helpWasPaused) togglePause(false);
+    }
+    document.getElementById('gxHelpOpen').onclick=showHelp;
+    document.getElementById('gxHelpClose').onclick=hideHelp;
+    helpEl.addEventListener('click',e=>{ if(e.target===helpEl) hideHelp(); });
+
     reset();
+    if(!localStorage.getItem(SEEN_KEY)){
+      localStorage.setItem(SEEN_KEY,'1');
+      showHelp();
+    }
     requestAnimationFrame(loop);
   </script>
 </body>

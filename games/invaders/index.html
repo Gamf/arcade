@@ -27,6 +27,7 @@
     <span class="gx-pill">Wave <b id="wave">1</b></span>
     <span class="gx-pill gx-pill--best"><svg class="gx-ico" style="width:1em;height:1em"><use href="#i-trophy"/></svg> <b id="best">0</b></span>
     <span class="gx-pill">Score <b id="score">0</b></span>
+    <button class="gx-help__open" id="gxHelpOpen" aria-label="How to play"><svg class="gx-ico"><use href="#i-info"/></svg></button>
   </div>
   <div class="wrap">
     <canvas id="c"></canvas>
@@ -50,6 +51,19 @@
       <div class="gx-modal__row">Best <b id="finalBest">0</b></div>
       <p class="gx-modal__new" id="newBest"></p>
       <button class="gx-btn gx-btn--primary" id="again"><svg class="gx-ico"><use href="#i-restart"/></svg> Play again</button>
+    </div>
+  </div>
+  <div class="gx-modal" id="gxHelp">
+    <div class="gx-modal__card">
+      <div class="gx-modal__title">How to Play</div>
+      <p class="gx-help__obj">Blast the descending alien fleet before they reach your ship, and survive each wave to rack up the highest score.</p>
+      <ul class="gx-help__list">
+        <li><b>Drag / Arrows / A D</b> <span>Move ship</span></li>
+        <li><b>Tap / Space</b> <span>Fire</span></li>
+        <li><b>P</b> <span>Pause</span></li>
+        <li><b>R</b> <span>Restart</span></li>
+      </ul>
+      <button class="gx-btn gx-btn--primary" id="gxHelpClose">Got it</button>
     </div>
   </div>
   <script type="module">
@@ -427,7 +441,27 @@
     document.getElementById('again').onclick=reset;
     document.getElementById('resume').onclick=()=>togglePause(false);
 
+    // ---- How-to-play overlay ----
+    const SEEN_KEY='gamf-seen-arcade-'+SLUG;
+    const helpEl=document.getElementById('gxHelp');
+    let pausedByHelp=false;
+    function showHelp(){
+      if(alive && !paused){ pausedByHelp=true; togglePause(true); }
+      helpEl.classList.add('gx-show');
+    }
+    function hideHelp(){
+      helpEl.classList.remove('gx-show');
+      if(pausedByHelp){ pausedByHelp=false; togglePause(false); }
+    }
+    document.getElementById('gxHelpOpen').addEventListener('click',showHelp);
+    document.getElementById('gxHelpClose').addEventListener('click',hideHelp);
+    helpEl.addEventListener('click',e=>{ if(e.target===helpEl) hideHelp(); });
+
     reset();
+    if(!localStorage.getItem(SEEN_KEY)){
+      localStorage.setItem(SEEN_KEY,'1');
+      showHelp();
+    }
     requestAnimationFrame(loop);
   </script>
 </body>
