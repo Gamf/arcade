@@ -1,0 +1,16 @@
+{
+  "genre": "arcade",
+  "title": "Arcade",
+  "games": [
+    {
+      "slug": "sample-pong",
+      "title": "Wall Pong",
+      "path": "games/sample-pong/",
+      "icon": "🏓",
+      "dims": "2D",
+      "tags": ["drag", "reflex"],
+      "license": "MIT",
+      "credit": "Gamf sample"
+    }
+  ]
+}
