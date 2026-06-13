@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+  <meta name="theme-color" content="#07080c">
+  <title>Asteroids — Gamf</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../../gamf.css">
+  <style>
+    /* game-specific bits only — chrome comes from gamf.css */
+    html, body { height: 100%; overflow: hidden; touch-action: none;
+      -webkit-user-select: none; user-select: none; }
+    canvas { display: block; width: 100%; height: 100%; touch-action: none; }
+    /* on-screen FIRE button for touch — pointer-events on so it's tappable */
+    .fire-btn { position: fixed; z-index: 5; right: calc(env(safe-area-inset-right) + 22px);
+      bottom: calc(env(safe-area-inset-bottom) + 70px); width: 84px; height: 84px; border-radius: 50%;
+      display: grid; place-items: center; cursor: pointer; pointer-events: auto;
+      font-family: var(--gx-font-display); font-weight: 700; font-size: var(--fs-sm); letter-spacing: .08em;
+      color: #0a0c12; border: 1px solid color-mix(in srgb, #fff 22%, transparent);
+      background: radial-gradient(120% 120% at 30% 25%, #ffd2cb 0%, var(--gx-accent) 70%);
+      box-shadow: 0 8px 26px color-mix(in srgb, var(--gx-accent) 55%, transparent), inset 0 1px 0 rgba(255,255,255,.5);
+      transition: transform var(--t-fast); }
+    .fire-btn:active { transform: scale(.92); }
+    .fire-btn svg { width: 24px; height: 24px; }
+  </style>
+</head>
+<body class="gx" style="--gx-accent:#ff7a6c">
+  <script src="../../gamf-icons.js"></script>
+
+  <canvas id="c"></canvas>
+
+  <!-- HUD (design system) -->
+  <div class="gx-hud">
+    <a class="gx-hud__back" href="../../"><svg class="gx-ico"><use href="#i-back"/></svg> Arcade</a>
+    <span class="gx-hud__spacer"></span>
+    <span class="gx-pill" id="livesPill">Ships <b id="lives">●●●</b></span>
+    <span class="gx-pill gx-pill--best"><svg class="gx-ico" style="width:1em;height:1em"><use href="#i-trophy"/></svg> <b id="best">0</b></span>
+    <span class="gx-pill">Score <b id="score">0</b></span>
+  </div>
+
+  <!-- Controls hint (design system) -->
+  <div class="gx-hint">
+    <span class="gx-hint__chip"><svg class="gx-ico"><use href="#i-touch"/></svg> drag to aim &amp; thrust</span>
+    <span class="gx-hint__chip"><svg class="gx-ico"><use href="#i-keyboard"/></svg> ← → rotate · ↑ thrust · Space fire</span>
+    <span class="gx-hint__chip"><svg class="gx-ico"><use href="#i-pause"/></svg> P pause · R restart</span>
+  </div>
+
+  <!-- Touch fire button -->
+  <div class="fire-btn" id="fireBtn" aria-label="Fire"><svg class="gx-ico"><use href="#i-play"/></svg></div>
+
+  <!-- Game-over / pause modal (design system) -->
+  <div class="gx-modal" id="over">
+    <div class="gx-modal__card">
+      <h2 class="gx-modal__title" id="overTitle">Game Over</h2>
+      <div class="gx-modal__row">Score <b id="finalScore">0</b></div>
+      <div class="gx-modal__row">Best <b id="finalBest">0</b></div>
+      <p class="gx-modal__new" id="newBest"></p>
+      <button class="gx-btn gx-btn--primary" id="again"><svg class="gx-ico"><use href="#i-restart"/></svg> Play again</button>
+    </div>
+  </div>
+  <div class="gx-modal" id="paused">
+    <div class="gx-modal__card">
+      <h2 class="gx-modal__title">Paused</h2>
+      <div class="gx-modal__row">Score <b id="pauseScore">0</b></div>
+      <button class="gx-btn gx-btn--primary" id="resume"><svg class="gx-ico"><use href="#i-play"/></svg> Resume</button>
+    </div>
+  </div>
+
+  <script type="module">
+    import { onDrag } from './touch.js';
+    const SLUG='asteroids', BEST_KEY='gamf-arcade-'+SLUG+'-best';
+    const canvas=document.getElementById('c'), ctx=canvas.getContext('2d');
+    const ACCENT='#ff7a6c', BLUE='#6c8cff', MINT='#7fe3a0', WARN='#ffb454';
+
+    let W,H,dpr;
+    function resize(){ dpr=Math.min(devicePixelRatio||1,2); W=innerWidth; H=innerHeight;
+      canvas.width=W*dpr; canvas.height=H*dpr; ctx.setTransform(dpr,0,0,dpr,0,0); }
+    addEventListener('resize', resize); resize();
+
+    // ---- seeded LCG (no Math.random / clock APIs) ----
+    let seed=0x9e3779b1;
+    const rnd=()=> (seed=(seed*1103515245+12345)&0x7fffffff)/0x7fffffff;
+    const rng=(a,b)=> a+(b-a)*rnd();
+
+    // ---- helpers ----
+    const TAU=Math.PI*2;
+    function wrap(o){ if(o.x<-o.r) o.x+=W+o.r*2; else if(o.x>W+o.r) o.x-=W+o.r*2;
+      if(o.y<-o.r) o.y+=H+o.r*2; else if(o.y>H+o.r) o.y-=H+o.r*2; }
+
+    // ---- state ----
+    let ship, rocks=[], bullets=[], particles=[];
+    let score=0, lives=3, level=1, alive=true, paused=false, t=0;
+    let invuln=0;                                   // frames of spawn invulnerability
+    let best=+(localStorage.getItem(BEST_KEY)||0);
+    document.getElementById('best').textContent=best;
+
+    const SHIP_R=15, THRUST=0.16, FRICTION=0.991, TURN=0.075, MAX_SP=8.5;
+    const BULLET_SP=9, BULLET_LIFE=58, FIRE_COOLDOWN=11;
+
+    function makeShip(){ return { x:W/2, y:H/2, vx:0, vy:0, a:-Math.PI/2, r:SHIP_R, thrusting:false, cool:0 }; }
+
+    // jagged rock outline baked once per rock so it looks hand-cut
+    function makeRock(x,y,size){ // size 3=big,2=med,1=small
+      const r=({3:46,2:28,1:16})[size];
+      const verts=Math.floor(rng(9,13)), shape=[];
+      for(let i=0;i<verts;i++){ const ang=(i/verts)*TAU; const rad=r*rng(0.74,1.12); shape.push({ang,rad}); }
+      const dir=rng(0,TAU), sp=({3:0.7,2:1.2,1:1.9})[size]*rng(0.6,1.25);
+      return { x,y, vx:Math.cos(dir)*sp, vy:Math.sin(dir)*sp, a:rng(0,TAU),
+               va:rng(-0.03,0.03), r, size, shape };
+    }
+
+    function spawnLevel(n){
+      rocks=[]; const count=3+n;                    // grows each level
+      for(let i=0;i<count;i++){
+        // spawn away from ship center
+        let x,y,tries=0;
+        do { x=rng(0,W); y=rng(0,H); tries++; }
+        while(Math.hypot(x-W/2,y-H/2)<160 && tries<30);
+        rocks.push(makeRock(x,y,3));
+      }
+    }
+
+    function burst(x,y,color,n,spread=3){ for(let i=0;i<n;i++){ const a=rnd()*TAU, sp=rng(0.6,spread);
+      particles.push({x,y,vx:Math.cos(a)*sp,vy:Math.sin(a)*sp,life:1,color,r:rng(1.4,2.8)}); } }
+
+    function updateHud(){ document.getElementById('score').textContent=score;
+      document.getElementById('lives').textContent='●'.repeat(Math.max(0,lives))||'—'; }
+
+    function start(){ seed=0x9e3779b1; score=0; lives=3; level=1; alive=true; paused=false;
+      bullets=[]; particles=[]; invuln=120; ship=makeShip(); spawnLevel(level); updateHud();
+      document.getElementById('over').classList.remove('gx-show');
+      document.getElementById('paused').classList.remove('gx-show'); }
+
+    function togglePause(force){ if(!alive) return;
+      paused = (force===undefined)? !paused : force;
+      document.getElementById('pauseScore').textContent=score;
+      document.getElementById('paused').classList.toggle('gx-show',paused); }
+
+    function loseLife(){ lives--; updateHud(); burst(ship.x,ship.y,ACCENT,34,5);
+      if(lives<=0) return end();
+      ship=makeShip(); invuln=140; }
+
+    function end(){ alive=false; paused=false;
+      document.getElementById('paused').classList.remove('gx-show');
+      const isNew=score>best;
+      if(isNew){ best=score; localStorage.setItem(BEST_KEY,best); document.getElementById('best').textContent=best; }
+      document.getElementById('overTitle').textContent='Game Over';
+      document.getElementById('finalScore').textContent=score;
+      document.getElementById('finalBest').textContent=best;
+      document.getElementById('newBest').textContent=isNew?'★ New best!':'';
+      document.getElementById('over').classList.add('gx-show'); }
+
+    function fire(){ if(!alive||paused||ship.cool>0) return; ship.cool=FIRE_COOLDOWN;
+      const mz=ship.r+4;                            // muzzle offset
+      bullets.push({ x:ship.x+Math.cos(ship.a)*mz, y:ship.y+Math.sin(ship.a)*mz,
+        vx:Math.cos(ship.a)*BULLET_SP+ship.vx*0.5, vy:Math.sin(ship.a)*BULLET_SP+ship.vy*0.5,
+        life:BULLET_LIFE, r:2.6 });
+      burst(ship.x+Math.cos(ship.a)*mz, ship.y+Math.sin(ship.a)*mz, WARN,4,1.6); }
+
+    function splitRock(rk,bx,by){
+      const gained=({3:20,2:50,1:100})[rk.size]; score+=gained; updateHud();
+      burst(rk.x,rk.y, rk.size===1?WARN:MINT, 10+rk.size*5, 3.5);
+      if(rk.size>1){ for(let k=0;k<2;k++){ const child=makeRock(rk.x,rk.y,rk.size-1);
+        // push children apart, biased away from impact
+        const a=Math.atan2(rk.y-by, rk.x-bx)+rng(-1,1);
+        const boost=rng(1.2,2.4);
+        child.vx+=Math.cos(a)*boost; child.vy+=Math.sin(a)*boost; rocks.push(child); } }
+    }
+
+    // ---------- input: KEYBOARD ----------
+    const keys={left:false,right:false,up:false};
+    addEventListener('keydown',e=>{
+      const k=e.key.length===1?e.key.toLowerCase():e.key;
+      if(k==='ArrowLeft'||k==='a'){ e.preventDefault(); keys.left=true; }
+      else if(k==='ArrowRight'||k==='d'){ e.preventDefault(); keys.right=true; }
+      else if(k==='ArrowUp'||k==='w'){ e.preventDefault(); keys.up=true; }
+      else if(k===' '||k==='Enter'){ e.preventDefault(); if(!alive) start(); else fire(); }
+      else if(k==='p'){ e.preventDefault(); togglePause(); }
+      else if(k==='r'){ e.preventDefault(); start(); }
+    });
+    addEventListener('keyup',e=>{
+      const k=e.key.length===1?e.key.toLowerCase():e.key;
+      if(k==='ArrowLeft'||k==='a') keys.left=false;
+      else if(k==='ArrowRight'||k==='d') keys.right=false;
+      else if(k==='ArrowUp'||k==='w') keys.up=false;
+    });
+
+    // ---------- input: TOUCH ----------
+    // Drag on the canvas: ship aims toward the drag point and thrusts while held.
+    let touchAim=null;   // {x,y} target in screen space, or null
+    onDrag(canvas,{
+      start:({x,y})=>{ if(alive&&!paused) touchAim={x,y}; },
+      move:({x,y})=>{ if(touchAim) touchAim={x,y}; },
+      end:()=>{ touchAim=null; }
+    });
+    // dedicated fire button (also rapid-fires while held)
+    const fireBtn=document.getElementById('fireBtn');
+    let fireHeld=false;
+    fireBtn.addEventListener('pointerdown',e=>{ e.preventDefault();
+      if(!alive){ start(); return; } fireHeld=true; fire(); });
+    const releaseFire=()=>{ fireHeld=false; };
+    fireBtn.addEventListener('pointerup',releaseFire);
+    fireBtn.addEventListener('pointercancel',releaseFire);
+    fireBtn.addEventListener('pointerleave',releaseFire);
+
+    document.getElementById('again').onclick=start;
+    document.getElementById('resume').onclick=()=>togglePause(false);
+
+    // ---------- update ----------
+    function update(){
+      t++;
+      if(invuln>0) invuln--;
+      if(ship.cool>0) ship.cool--;
+      if(fireHeld && t%FIRE_COOLDOWN===0) fire();
+
+      // steering
+      if(keys.left)  ship.a-=TURN;
+      if(keys.right) ship.a+=TURN;
+      ship.thrusting=false;
+
+      if(touchAim){
+        // aim toward target; thrust proportional to distance
+        const dx=touchAim.x-ship.x, dy=touchAim.y-ship.y, dist=Math.hypot(dx,dy);
+        const target=Math.atan2(dy,dx);
+        let diff=((target-ship.a+Math.PI)%TAU+TAU)%TAU-Math.PI;
+        ship.a+=Math.max(-TURN*1.6,Math.min(TURN*1.6,diff));
+        if(dist>SHIP_R*1.4){ ship.vx+=Math.cos(ship.a)*THRUST; ship.vy+=Math.sin(ship.a)*THRUST; ship.thrusting=true; }
+      }
+      if(keys.up){ ship.vx+=Math.cos(ship.a)*THRUST; ship.vy+=Math.sin(ship.a)*THRUST; ship.thrusting=true; }
+
+      if(ship.thrusting){
+        const ex=ship.x-Math.cos(ship.a)*ship.r, ey=ship.y-Math.sin(ship.a)*ship.r;
+        if(t%2===0) particles.push({x:ex,y:ey,
+          vx:-Math.cos(ship.a)*rng(1,2.6)+ship.vx*0.3, vy:-Math.sin(ship.a)*rng(1,2.6)+ship.vy*0.3,
+          life:0.7,color:WARN,r:rng(1.6,3)});
+      }
+
+      // ship physics
+      ship.vx*=FRICTION; ship.vy*=FRICTION;
+      const sp=Math.hypot(ship.vx,ship.vy);
+      if(sp>MAX_SP){ ship.vx=ship.vx/sp*MAX_SP; ship.vy=ship.vy/sp*MAX_SP; }
+      ship.x+=ship.vx; ship.y+=ship.vy; wrap(ship);
+
+      // bullets
+      for(const b of bullets){ b.x+=b.vx; b.y+=b.vy; b.life--; wrap(b); }
+      bullets=bullets.filter(b=>b.life>0);
+
+      // rocks
+      for(const rk of rocks){ rk.x+=rk.vx; rk.y+=rk.vy; rk.a+=rk.va; wrap(rk); }
+
+      // bullet vs rock
+      outer:
+      for(let i=bullets.length-1;i>=0;i--){ const b=bullets[i];
+        for(let j=rocks.length-1;j>=0;j--){ const rk=rocks[j];
+          if(Math.hypot(b.x-rk.x,b.y-rk.y) < rk.r){
+            bullets.splice(i,1); rocks.splice(j,1); splitRock(rk,b.x,b.y); continue outer;
+          }
+        }
+      }
+
+      // ship vs rock
+      if(invuln<=0){
+        for(const rk of rocks){
+          if(Math.hypot(ship.x-rk.x,ship.y-rk.y) < rk.r+ship.r*0.7){ loseLife(); break; }
+        }
+      }
+
+      // next level when cleared
+      if(rocks.length===0 && alive){ level++; invuln=Math.max(invuln,70);
+        burst(W/2,H/2,MINT,30,4); spawnLevel(level); }
+
+      // particles
+      for(const p of particles){ p.x+=p.vx; p.y+=p.vy; p.vx*=0.96; p.vy*=0.96; p.life-=0.022; }
+      particles=particles.filter(p=>p.life>0);
+    }
+
+    // ---------- render ----------
+    function drawShip(){
+      if(invuln>0 && Math.floor(t/4)%2===0) return;   // blink while invulnerable
+      ctx.save(); ctx.translate(ship.x,ship.y); ctx.rotate(ship.a);
+      // thrust flame
+      if(ship.thrusting){ ctx.save(); ctx.shadowBlur=16; ctx.shadowColor=WARN; ctx.fillStyle=WARN;
+        ctx.globalAlpha=0.6+0.4*Math.sin(t/2); ctx.beginPath();
+        ctx.moveTo(-ship.r,0); ctx.lineTo(-ship.r-rng(8,16),0);
+        ctx.lineTo(-ship.r,3); ctx.closePath();
+        ctx.moveTo(-ship.r,0); ctx.lineTo(-ship.r-rng(8,16),0); ctx.lineTo(-ship.r,-3); ctx.closePath();
+        ctx.fill(); ctx.restore(); }
+      // hull — glowing vector triangle
+      ctx.shadowBlur=18; ctx.shadowColor=BLUE; ctx.lineJoin='round';
+      ctx.strokeStyle='#cfe0ff'; ctx.lineWidth=2.4;
+      const g=ctx.createLinearGradient(-ship.r,0,ship.r,0);
+      g.addColorStop(0,'rgba(108,140,255,.25)'); g.addColorStop(1,'rgba(108,140,255,.05)');
+      ctx.fillStyle=g;
+      ctx.beginPath();
+      ctx.moveTo(ship.r,0);
+      ctx.lineTo(-ship.r,ship.r*0.72);
+      ctx.lineTo(-ship.r*0.55,0);
+      ctx.lineTo(-ship.r,-ship.r*0.72);
+      ctx.closePath(); ctx.fill(); ctx.stroke();
+      ctx.restore();
+    }
+
+    function drawRock(rk){
+      ctx.save(); ctx.translate(rk.x,rk.y); ctx.rotate(rk.a);
+      ctx.shadowBlur=14; ctx.shadowColor=MINT;
+      ctx.strokeStyle='#bfe8d6'; ctx.lineWidth=2; ctx.lineJoin='round';
+      ctx.fillStyle='rgba(127,227,160,.07)';
+      ctx.beginPath();
+      rk.shape.forEach((v,i)=>{ const px=Math.cos(v.ang)*v.rad, py=Math.sin(v.ang)*v.rad;
+        i?ctx.lineTo(px,py):ctx.moveTo(px,py); });
+      ctx.closePath(); ctx.fill(); ctx.stroke();
+      ctx.restore();
+    }
+
+    function drawBullet(b){ ctx.save(); ctx.shadowBlur=14; ctx.shadowColor=WARN;
+      const g=ctx.createRadialGradient(b.x,b.y,0,b.x,b.y,b.r*2);
+      g.addColorStop(0,'#fff4d6'); g.addColorStop(1,WARN); ctx.fillStyle=g;
+      ctx.beginPath(); ctx.arc(b.x,b.y,b.r,0,TAU); ctx.fill(); ctx.restore(); }
+
+    function render(){
+      // layered space backdrop
+      const g=ctx.createRadialGradient(W*0.5,H*0.35,0,W*0.5,H*0.35,Math.max(W,H)*0.8);
+      g.addColorStop(0,'#0d1018'); g.addColorStop(1,'#07080c');
+      ctx.fillStyle=g; ctx.fillRect(0,0,W,H);
+      // drifting starfield (seeded, deterministic offsets)
+      ctx.save();
+      let s2=20240601;
+      const rs=()=> (s2=(s2*1103515245+12345)&0x7fffffff)/0x7fffffff;
+      for(let i=0;i<90;i++){ const sx=(rs()*W + t*(0.1+rs()*0.3))%W; const sy=rs()*H;
+        const tw=0.3+0.7*Math.abs(Math.sin(t/40+i)); ctx.globalAlpha=tw*0.6;
+        ctx.fillStyle=i%9===0?BLUE:'#dfe6f5';
+        ctx.fillRect(sx, sy, tw*1.6, tw*1.6); }
+      ctx.restore();
+
+      particles.forEach(p=>{ ctx.save(); ctx.globalAlpha=Math.max(0,p.life); ctx.fillStyle=p.color;
+        ctx.shadowBlur=8; ctx.shadowColor=p.color; ctx.beginPath();
+        ctx.arc(p.x,p.y,p.r*Math.max(0.3,p.life),0,TAU); ctx.fill(); ctx.restore(); });
+
+      rocks.forEach(drawRock);
+      bullets.forEach(drawBullet);
+      if(alive) drawShip();
+
+      // level banner pulse on start of a wave
+      if(alive && rocks.length && t%1===0){ /* no-op keeps deterministic */ }
+    }
+
+    function frame(){
+      if(alive && !paused) update();
+      else { // keep particles + starfield alive on overlays
+        for(const p of particles){ p.x+=p.vx; p.y+=p.vy; p.vx*=0.96; p.vy*=0.96; p.life-=0.022; }
+        particles=particles.filter(p=>p.life>0); t++;
+      }
+      render();
+      requestAnimationFrame(frame);
+    }
+
+    start(); frame();
+  </script>
+</body>
+</html>

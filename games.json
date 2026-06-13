@@ -3,6 +3,17 @@
   "title": "Arcade",
   "games": [
     {
+      "slug": "asteroids",
+      "title": "Asteroids",
+      "path": "games/asteroids/",
+      "icon": "🪨",
+      "color": "#ff7a6c",
+      "dims": "2D",
+      "tags": ["rotate", "thrust", "shoot", "classic"],
+      "license": "MIT",
+      "credit": "Gamf original"
+    },
+    {
       "slug": "breakout",
       "title": "Breakout",
       "path": "games/breakout/",
@@ -21,16 +32,6 @@
       "tags": ["swipe", "arrows", "classic"],
       "license": "MIT",
       "credit": "Gamf · classic Snake design"
-    },
-    {
-      "slug": "sample-pong",
-      "title": "Wall Pong",
-      "path": "games/sample-pong/",
-      "icon": "🏓",
-      "dims": "2D",
-      "tags": ["drag", "arrows", "reflex"],
-      "license": "MIT",
-      "credit": "Gamf sample"
     }
   ]
 }

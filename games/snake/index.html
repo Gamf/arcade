@@ -3,45 +3,52 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
-  <meta name="theme-color" content="#0e0f13">
+  <meta name="theme-color" content="#07080c">
   <title>Snake — Gamf</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../../gamf.css">
   <style>
-    *{box-sizing:border-box} html,body{margin:0;height:100%;overflow:hidden;background:#0e0f13;color:#f2f3f5;
-      font-family:system-ui,sans-serif;-webkit-tap-highlight-color:transparent;touch-action:none;
+    /* game-specific only — chrome comes from gamf.css */
+    html,body{height:100%;overflow:hidden;touch-action:none;
       -webkit-user-select:none;user-select:none}
     .wrap{height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;
       padding:env(safe-area-inset-top) 12px env(safe-area-inset-bottom)}
-    .top{display:flex;align-items:center;gap:14px;width:min(94vw,460px)}
-    .top a{color:#6c8cff;text-decoration:none;font-size:.9rem}
-    .top .best{color:#7fe3a0;font-weight:700}
-    .top .sc{margin-left:auto;font-weight:700}
     canvas{background:#11131b;border-radius:14px;touch-action:none;
       box-shadow:0 10px 40px rgba(0,0,0,.5),0 0 0 1px rgba(108,140,255,.12)}
-    .hint{color:#7d8493;font-size:.85rem;text-align:center}
-    .over{position:fixed;inset:0;display:none;place-items:center;background:rgba(8,9,13,.84);z-index:3;text-align:center}
-    .over.show{display:grid} .over h2{margin:0 0 6px;font-size:1.8rem}
-    .over .row{color:#aeb4c2;margin:4px 0}
-    .over b{color:#9ab4ff} .over .bbest{color:#7fe3a0}
-    .over button{all:unset;margin-top:16px;color:#0e0f13;
-      background:linear-gradient(135deg,#9ab4ff,#6c8cff);font-weight:700;padding:12px 22px;border-radius:12px;cursor:pointer;
-      box-shadow:0 6px 20px rgba(108,140,255,.4)}
-    .paused{position:fixed;inset:0;display:none;place-items:center;background:rgba(8,9,13,.55);z-index:2;
-      font-size:1.4rem;font-weight:700;letter-spacing:.1em}
-    .paused.show{display:grid}
   </style>
 </head>
-<body>
-  <div class="wrap">
-    <div class="top"><a href="../../">← Arcade</a>
-      <span>Best: <b class="best" id="best">0</b></span><span class="sc">Score: <b id="score">0</b></span></div>
-    <canvas id="c"></canvas>
-    <div class="hint">swipe / arrows · WASD &nbsp;·&nbsp; P pause · R restart</div>
+<body class="gx" style="--gx-accent:#ff7a6c">
+  <script src="../../gamf-icons.js"></script>
+  <div class="gx-hud">
+    <a class="gx-hud__back" href="../../"><svg class="gx-ico"><use href="#i-back"/></svg> Arcade</a>
+    <span class="gx-hud__spacer"></span>
+    <span class="gx-pill gx-pill--best"><svg class="gx-ico" style="width:1em;height:1em"><use href="#i-trophy"/></svg> <b id="best">0</b></span>
+    <span class="gx-pill">Score <b id="score">0</b></span>
   </div>
-  <div class="paused" id="paused">PAUSED</div>
-  <div class="over" id="over"><div><h2>Game Over</h2>
-    <div class="row">Score <b id="finalScore">0</b></div>
-    <div class="row">Best <b class="bbest" id="finalBest">0</b></div>
-    <button id="again">Play again</button></div></div>
+  <div class="wrap">
+    <canvas id="c"></canvas>
+  </div>
+  <div class="gx-hint">
+    <span class="gx-hint__chip"><svg class="gx-ico"><use href="#i-touch"/></svg> swipe to steer</span>
+    <span class="gx-hint__chip"><svg class="gx-ico"><use href="#i-keyboard"/></svg> arrows / WASD</span>
+    <span class="gx-hint__chip"><svg class="gx-ico"><use href="#i-pause"/></svg> P pause · R restart</span>
+  </div>
+  <div class="gx-modal" id="paused">
+    <div class="gx-modal__card">
+      <h2 class="gx-modal__title">Paused</h2>
+      <button class="gx-btn gx-btn--primary" id="resume"><svg class="gx-ico"><use href="#i-play"/></svg> Resume</button>
+    </div>
+  </div>
+  <div class="gx-modal" id="over">
+    <div class="gx-modal__card">
+      <h2 class="gx-modal__title">Game Over</h2>
+      <div class="gx-modal__row">Score <b id="finalScore">0</b></div>
+      <div class="gx-modal__row">Best <b id="finalBest">0</b></div>
+      <button class="gx-btn gx-btn--primary" id="again"><svg class="gx-ico"><use href="#i-restart"/></svg> Play again</button>
+    </div>
+  </div>
   <script type="module">
     import { onSwipe } from './touch.js';
     const SLUG='snake', BEST_KEY='gamf-arcade-'+SLUG+'-best';
@@ -70,12 +77,13 @@
     function reset(){ snake=[{x:8,y:8},{x:7,y:8},{x:6,y:8}]; dir={x:1,y:0}; nextDir=dir;
       score=0; speed=130; alive=true; paused=false; particles=[]; placeFood();
       document.getElementById('score').textContent=0;
-      document.getElementById('over').classList.remove('show');
-      document.getElementById('paused').classList.remove('show');
+      document.getElementById('over').classList.remove('gx-show');
+      document.getElementById('paused').classList.remove('gx-show');
       clearInterval(timer); timer=setInterval(tick, speed); fit(); }
 
-    function togglePause(){ if(!alive) return; paused=!paused;
-      document.getElementById('paused').classList.toggle('show',paused); }
+    function togglePause(force){ if(!alive) return;
+      paused=(force===undefined)?!paused:force;
+      document.getElementById('paused').classList.toggle('gx-show',paused); }
 
     function setDir(nx,ny){ if(nx===-dir.x&&ny===-dir.y) return; nextDir={x:nx,y:ny}; }
     function tick(){ if(!alive||paused) return; dir=nextDir;
@@ -122,7 +130,7 @@
       if(score>best){ best=score; localStorage.setItem(BEST_KEY,best); document.getElementById('best').textContent=best; }
       document.getElementById('finalScore').textContent=score;
       document.getElementById('finalBest').textContent=best;
-      document.getElementById('over').classList.add('show'); }
+      document.getElementById('over').classList.add('gx-show'); }
 
     onSwipe(canvas,(d)=>{ if(d==='left')setDir(-1,0); else if(d==='right')setDir(1,0);
       else if(d==='up')setDir(0,-1); else setDir(0,1); },18);
@@ -135,6 +143,7 @@
       if(k==='r'){ e.preventDefault(); reset(); return; }
       if((k===' '||k==='Enter')&&!alive){ e.preventDefault(); reset(); } });
     document.getElementById('again').onclick=reset;
+    document.getElementById('resume').onclick=()=>togglePause(false);
     reset(); loop();
   </script>
 </body>
