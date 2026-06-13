@@ -3,12 +3,22 @@
   "title": "Arcade",
   "games": [
     {
+      "slug": "breakout",
+      "title": "Breakout",
+      "path": "games/breakout/",
+      "icon": "🧱",
+      "dims": "2D",
+      "tags": ["drag", "arrows", "classic"],
+      "license": "MIT",
+      "credit": "Gamf · classic Breakout design"
+    },
+    {
       "slug": "snake",
       "title": "Snake",
       "path": "games/snake/",
       "icon": "🐍",
       "dims": "2D",
-      "tags": ["swipe", "classic"],
+      "tags": ["swipe", "arrows", "classic"],
       "license": "MIT",
       "credit": "Gamf · classic Snake design"
     },
@@ -18,7 +28,7 @@
       "path": "games/sample-pong/",
       "icon": "🏓",
       "dims": "2D",
-      "tags": ["drag", "reflex"],
+      "tags": ["drag", "arrows", "reflex"],
       "license": "MIT",
       "credit": "Gamf sample"
     }
