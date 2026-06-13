@@ -32,6 +32,17 @@
       "tags": ["swipe", "arrows", "classic"],
       "license": "MIT",
       "credit": "Gamf · classic Snake design"
+    },
+    {
+      "slug": "invaders",
+      "title": "Invaders",
+      "path": "games/invaders/",
+      "icon": "👾",
+      "color": "#36e0c2",
+      "dims": "2D",
+      "tags": ["shoot", "drag", "arrows", "waves"],
+      "license": "MIT",
+      "credit": "Gamf original"
     }
   ]
 }
