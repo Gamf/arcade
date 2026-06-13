@@ -3,6 +3,16 @@
   "title": "Arcade",
   "games": [
     {
+      "slug": "snake",
+      "title": "Snake",
+      "path": "games/snake/",
+      "icon": "🐍",
+      "dims": "2D",
+      "tags": ["swipe", "classic"],
+      "license": "MIT",
+      "credit": "Gamf · classic Snake design"
+    },
+    {
       "slug": "sample-pong",
       "title": "Wall Pong",
       "path": "games/sample-pong/",
