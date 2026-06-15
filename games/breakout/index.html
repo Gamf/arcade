@@ -60,6 +60,7 @@
       <button class="gx-btn gx-btn--primary" id="gxHelpClose">Got it</button>
     </div>
   </div>
+  <script src="../../gamf-controls.js"></script>
   <script type="module">
     import { onDrag } from './touch.js';
     const SLUG='breakout', BEST_KEY='gamf-arcade-'+SLUG+'-best';
@@ -257,6 +258,20 @@
     document.getElementById('gxHelpOpen').addEventListener('click',openHelp);
     document.getElementById('gxHelpClose').addEventListener('click',closeHelp);
     helpEl.addEventListener('click',e=>{ if(e.target===helpEl) closeHelp(); });
+
+    // on-screen buttons (everything is a button) — wired to the same logic as the keyboard
+    window.gamfControls({
+      move: {
+        left:  ()=>{ if(alive&&!paused) setPaddleCenter(paddle.x+paddle.w/2 - 9); },
+        right: ()=>{ if(alive&&!paused) setPaddleCenter(paddle.x+paddle.w/2 + 9); },
+      },
+      hold: true,  // continuous paddle movement while held
+      actions: [
+        { label:'Launch', press:()=>{ if(!alive) startGame(); else launch(); } },
+        { label:'Pause',  press:()=>togglePause() },
+        { label:'Restart',press:()=>startGame() },
+      ],
+    });
 
     resize(); startGame(); frame();
 

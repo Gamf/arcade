@@ -77,6 +77,7 @@
     </div>
   </div>
 
+  <script src="../../gamf-controls.js"></script>
   <script type="module">
     import { onTap } from './touch.js';
     const SLUG='flappy', BEST_KEY='gamf-arcade-'+SLUG+'-best';
@@ -254,6 +255,26 @@
       e.preventDefault();
       if(mode==='dead' || paused) return;
       flap();
+    });
+
+    // ---------- input: ON-SCREEN BUTTONS (shared helper) ----------
+    // Every keyboard action mirrored to a button so the game is fully button-playable.
+    function btnFlap(){            // ▲ — same as Space/↑/W: flap, or restart from the death pop
+      if(helpEl.classList.contains('gx-show')){ hideHelp(); return; }
+      if(mode==='dead'){ if(t>=deadShowAt) start(); return; }
+      if(paused) return;
+      flap();
+    }
+    function btnDive(){            // ▼ — same as ↓/S: quick dive nudge
+      if(mode==='play' && !paused) bird.vy=Math.min(MAXFALL, bird.vy+4*S);
+    }
+    window.gamfControls({
+      move: { up:btnFlap, down:btnDive },   // only the two directions this game uses
+      hold: false,                          // step game: one flap/dive per press
+      actions: [
+        { label:'Pause',   press:()=>togglePause() },  // P
+        { label:'Restart', press:()=>start() },        // R
+      ],
     });
 
     document.getElementById('again').onclick=start;

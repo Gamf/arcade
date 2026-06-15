@@ -69,6 +69,7 @@
       <button class="gx-btn gx-btn--primary" id="gxHelpClose">Got it</button>
     </div>
   </div>
+  <script src="../../gamf-controls.js"></script>
   <script type="module">
     import { onSwipe } from './touch.js';
 
@@ -387,6 +388,21 @@
     });
     $('again').onclick=reset;
     $('resume').onclick=()=>togglePause(false);
+
+    // on-screen buttons (shared helper) — mirror the keyboard exactly:
+    // a direction restarts when dead, otherwise hops; plus Pause + Restart actions.
+    const hopOrReset=(dx,dy)=>{ if(!alive){ reset(); return; } hop(dx,dy); };
+    window.gamfControls({
+      move:{
+        left:()=>hopOrReset(-1,0), right:()=>hopOrReset(1,0),
+        up:()=>hopOrReset(0,-1),   down:()=>hopOrReset(0,1)
+      },
+      hold:false,                       // step game — one hop per press
+      actions:[
+        { label:'Pause', press:()=>togglePause() },
+        { label:'Restart', press:()=>reset() }
+      ]
+    });
 
     // How-to-play overlay
     const SEEN_KEY='gamf-seen-arcade-'+SLUG;

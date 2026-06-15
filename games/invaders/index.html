@@ -66,6 +66,7 @@
       <button class="gx-btn gx-btn--primary" id="gxHelpClose">Got it</button>
     </div>
   </div>
+  <script src="../../gamf-controls.js"></script>
   <script type="module">
     import { onTap, onDrag } from './touch.js';
     const SLUG='invaders', BEST_KEY='gamf-arcade-'+SLUG+'-best';
@@ -429,6 +430,24 @@
 
     document.getElementById('again').onclick=reset;
     document.getElementById('resume').onclick=()=>togglePause(false);
+
+    // ---- input: on-screen buttons (same actions as keyboard) ----
+    // Move left/right: nudge the ship; hold:true auto-repeats for continuous glide.
+    const moveStep=14;
+    function clampPlayer(){ player.x=Math.max(player.w/2+4, Math.min(W-player.w/2-4, player.x)); }
+    function stepLeft(){ if(!alive||paused) return; player.x-=moveStep; clampPlayer(); }
+    function stepRight(){ if(!alive||paused) return; player.x+=moveStep; clampPlayer(); }
+    // Fire button reuses the keyboard's fire() (also restarts when dead, like Space).
+    function btnFire(){ if(!alive){ reset(); } else { fire(); } }
+    window.gamfControls({
+      move:{ left:stepLeft, right:stepRight },
+      hold:true,
+      actions:[
+        { label:'Fire', press:btnFire },
+        { label:'Pause', press:()=>togglePause() },
+        { label:'Restart', press:reset },
+      ],
+    });
 
     // ---- How-to-play overlay ----
     const SEEN_KEY='gamf-seen-arcade-'+SLUG;

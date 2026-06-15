@@ -65,6 +65,7 @@
       <button class="gx-btn gx-btn--primary" id="gxHelpClose">Got it</button>
     </div>
   </div>
+  <script src="../../gamf-controls.js"></script>
   <script type="module">
     import { onSwipe } from './touch.js';
     const SLUG='snake', BEST_KEY='gamf-arcade-'+SLUG+'-best';
@@ -163,6 +164,21 @@
     document.getElementById('gxHelpOpen').onclick=showHelp;
     document.getElementById('gxHelpClose').onclick=hideHelp;
     help.addEventListener('click',e=>{ if(e.target===help) hideHelp(); });
+
+    // on-screen buttons (everything is a button) — same fns the keyboard uses
+    window.gamfControls({
+      move: {
+        left:  ()=>setDir(-1,0),
+        right: ()=>setDir(1,0),
+        up:    ()=>setDir(0,-1),
+        down:  ()=>setDir(0,1),
+      },
+      hold: false,                       // snake steers in discrete steps, no auto-repeat
+      actions: [
+        { label:'Pause',   press:()=>togglePause() },
+        { label:'Restart', press:()=>reset() },
+      ],
+    });
 
     reset(); loop();
     if(!localStorage.getItem(SEEN_KEY)){ showHelp(); localStorage.setItem(SEEN_KEY,'1'); }

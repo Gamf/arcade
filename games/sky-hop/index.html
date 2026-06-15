@@ -61,6 +61,7 @@
       <button class="gx-btn gx-btn--primary" id="gxHelpClose">Got it</button>
     </div>
   </div>
+  <script src="../../gamf-controls.js"></script>
   <script type="module">
     import { onDrag } from './touch.js';
     const SLUG='sky-hop', BEST_KEY='gamf-arcade-'+SLUG+'-best';
@@ -194,6 +195,19 @@
       else if((k==='arrowright'||k==='right'||k==='d')&&keyDir>0) keyDir=0; });
     document.getElementById('again').onclick=()=>{ start(); };
     document.getElementById('resume').onclick=()=>togglePause(false);
+
+    // on-screen buttons (shared helper) — drive the same logic as the keyboard.
+    // Steering nudges velocity per press; hold:true auto-repeats while held, and
+    // friction stops the player on release (same feel as tapping ← →).
+    function steer(dir){ if(state!=='play') start(); if(state==='play') player.vx += dir*MOVE*1.4; }
+    window.gamfControls({
+      move:{ left:()=>steer(-1), right:()=>steer(1) },
+      hold:true,
+      actions:[
+        { label:'Pause', press:()=>togglePause() },
+        { label:'Restart', press:()=>{ reset(); state='play'; } },
+      ],
+    });
 
     // ---------------------------------------------------------------- sim
     function step(){

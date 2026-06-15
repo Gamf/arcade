@@ -85,6 +85,7 @@
     </div>
   </div>
 
+  <script src="../../gamf-controls.js"></script>
   <script type="module">
     import { onDrag } from './touch.js';
     const SLUG='asteroids', BEST_KEY='gamf-arcade-'+SLUG+'-best';
@@ -381,6 +382,30 @@
       render();
       requestAnimationFrame(frame);
     }
+
+    // ---------- input: ON-SCREEN BUTTONS (shared helper) ----------
+    // Rotation & thrust are held-state flags read each frame. The D-pad's press
+    // callback auto-repeats every ~120ms while held (hold:true); each press keeps
+    // the flag alive a touch longer than the repeat interval, so holding sustains
+    // movement and releasing lets it lapse — same effect as holding a key.
+    const moveTimers={left:null,right:null,up:null};
+    function holdMove(dir){ keys[dir]=true;
+      clearTimeout(moveTimers[dir]);
+      moveTimers[dir]=setTimeout(()=>{ keys[dir]=false; }, 180); }
+    window.gamfControls({
+      move:{
+        left:()=>holdMove('left'),     // ← / A : rotate left
+        right:()=>holdMove('right'),   // → / D : rotate right
+        up:()=>holdMove('up')          // ↑ / W : thrust forward
+        // no 'down' — game has no reverse/down control
+      },
+      hold:true,                       // continuous rotate/thrust while held
+      actions:[
+        { label:'Fire', press:()=>{ if(!alive) start(); else fire(); } }, // Space/Enter
+        { label:'Pause', press:()=>togglePause() },                       // P
+        { label:'Restart', press:()=>start() }                            // R
+      ]
+    });
 
     start(); frame();
 

@@ -69,6 +69,7 @@
       <button class="gx-btn gx-btn--primary" id="again"><svg class="gx-ico"><use href="#i-restart"/></svg> Play again</button>
     </div>
   </div>
+  <script src="../../gamf-controls.js"></script>
   <script type="module">
     import { onTap, onDrag } from './touch.js';
     const SLUG='galaxia', BEST_KEY='gamf-arcade-'+SLUG+'-best';
@@ -111,6 +112,10 @@
     let score, best=+(localStorage.getItem(BEST_KEY)||0), wave, lives;
     let alive, paused, running, shootCooldown, flash, shakeT;
     const keys={left:false,right:false,fire:false};
+    // on-screen D-pad uses self-expiring timestamps (no release hook for move
+    // buttons), so a held button keeps refreshing this past `now` and releasing
+    // lets it lapse — without ever clearing keyboard `keys` flags.
+    const btnHold={left:0,right:0};
     document.getElementById('best').textContent=best;
 
     function setScore(v){ score=v; document.getElementById('score').textContent=score; }
@@ -221,10 +226,10 @@
       shakeT=Math.max(0,shakeT-dt);
       breathe+=dt;
 
-      // player movement
-      const pspeed=215;
-      if(keys.left)  player.x-=pspeed*dt;
-      if(keys.right) player.x+=pspeed*dt;
+      // player movement (keyboard flags OR live on-screen D-pad holds)
+      const pspeed=215, now=performance.now();
+      if(keys.left  || btnHold.left>now)  player.x-=pspeed*dt;
+      if(keys.right || btnHold.right>now)  player.x+=pspeed*dt;
       player.x=Math.max(player.w/2+4, Math.min(W-player.w/2-4, player.x));
       if(keys.fire) fire();
 
@@ -528,6 +533,24 @@
     document.getElementById('gxHelpOpen').onclick=showHelp;
     document.getElementById('gxHelpClose').onclick=hideHelp;
     helpEl.addEventListener('click',e=>{ if(e.target===helpEl) hideHelp(); });
+
+    // ---- on-screen buttons (mirror the keyboard handlers) ----
+    // Helper auto-repeats held move buttons every 120ms; each repeat refreshes a
+    // 220ms hold window so the ship glides while held and stops on release.
+    window.gamfControls({
+      move:{
+        left:  ()=>{ btnHold.left =performance.now()+220; },
+        right: ()=>{ btnHold.right=performance.now()+220; },
+      },
+      hold:true,                              // continuous movement
+      actions:[
+        { label:'Fire',
+          press:  ()=>{ if(!alive){ reset(); } else { keys.fire=true; fire(); } },
+          release:()=>{ keys.fire=false; } },
+        { label:'Pause',   press:()=>togglePause() },
+        { label:'Restart', press:()=>reset() },
+      ],
+    });
 
     reset();
     if(!localStorage.getItem(SEEN_KEY)){

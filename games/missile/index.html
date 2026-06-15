@@ -77,6 +77,7 @@
     </div>
   </div>
 
+  <script src="../../gamf-controls.js"></script>
   <script type="module">
     import { onTap } from './touch.js';
     const SLUG='missile', BEST_KEY='gamf-arcade-'+SLUG+'-best';
@@ -549,6 +550,25 @@
       render();
       requestAnimationFrame(frame);
     }
+
+    // ---------- input: ON-SCREEN BUTTONS (shared helper) ----------
+    // Wire each button to the same behaviour the keyboard triggers.
+    const AIM_STEP=0.045;                              // matches keyboard TURN per step
+    function aimLeft(){ if(!aliveGame||paused) return;
+      aimAngle-=AIM_STEP; if(aimAngle<-Math.PI+0.18) aimAngle=-Math.PI+0.18; }
+    function aimRight(){ if(!aliveGame||paused) return;
+      aimAngle+=AIM_STEP; if(aimAngle>-0.18) aimAngle=-0.18; }
+    function aimUp(){ if(!aliveGame||paused) return; aimAngle=-Math.PI/2; }   // ↑ / W
+    function fireBtn(){ if(!aliveGame){ start(); return; } if(!paused) fireAim(); } // Space
+    window.gamfControls({
+      move:{ left:aimLeft, right:aimRight, up:aimUp },   // turret aim (no down in this game)
+      hold:true,                                          // auto-repeat for continuous aiming
+      actions:[
+        { label:'Fire',  press:fireBtn },
+        { label:'Pause', press:()=>togglePause() },
+        { label:'Restart', press:start },
+      ],
+    });
 
     resize(); start(); frame();
 

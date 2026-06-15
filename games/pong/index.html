@@ -61,6 +61,7 @@
       <button class="gx-btn gx-btn--primary" id="gxHelpClose">Got it</button>
     </div>
   </div>
+  <script src="../../gamf-controls.js"></script>
   <script type="module">
     import { onDrag } from './touch.js';
     const SLUG='pong', BEST_KEY='gamf-arcade-'+SLUG+'-best';
@@ -291,6 +292,21 @@
     document.getElementById('gxHelpOpen').onclick=showHelp;
     document.getElementById('gxHelpClose').onclick=hideHelp;
     helpEl.addEventListener('click', e=>{ if(e.target===helpEl) hideHelp(); });
+
+    // on-screen buttons (shared helper) — drive the SAME functions as the keyboard.
+    // Up/Down = paddle move (Arrow/W S); Serve = Space/Enter; Pause = P; Restart = R.
+    const padStep=10;
+    function movePaddle(dir){ if(alive&&!paused) player.y=clampPad(player.y + dir*padStep); }
+    function serveOrStart(){ if(!alive) startGame(); else serve(); }
+    window.gamfControls({
+      move:{ up:()=>movePaddle(-1), down:()=>movePaddle(1) },
+      hold:true,
+      actions:[
+        { label:'Serve', press:serveOrStart },
+        { label:'Pause', press:()=>togglePause() },
+        { label:'Restart', press:startGame },
+      ],
+    });
 
     resize(); startGame(); frame();
 
