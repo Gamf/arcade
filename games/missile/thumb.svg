@@ -1,0 +1,37 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 200" width="320" height="200">
+  <!-- ground -->
+  <rect x="0" y="0" width="320" height="200" fill="#f3ece0"/>
+  <rect x="0" y="158" width="320" height="42" fill="#6f6a3b"/>
+  <rect x="0" y="158" width="320" height="5" fill="#9b3a22"/>
+
+  <!-- city skyline (cream blocks) -->
+  <rect x="30"  y="128" width="16" height="30" fill="#221f17"/>
+  <rect x="50"  y="116" width="16" height="42" fill="#221f17"/>
+  <rect x="70"  y="134" width="16" height="24" fill="#221f17"/>
+  <rect x="250" y="124" width="16" height="34" fill="#221f17"/>
+  <rect x="270" y="118" width="16" height="40" fill="#221f17"/>
+
+  <!-- missile base bunker (center) -->
+  <polygon points="140,158 152,140 168,140 180,158" fill="#221f17"/>
+  <!-- ammo pyramid -->
+  <circle cx="160" cy="135" r="3" fill="#c8923a"/>
+  <circle cx="153" cy="135" r="3" fill="#c8923a"/>
+  <circle cx="167" cy="135" r="3" fill="#c8923a"/>
+  <circle cx="157" cy="129" r="3" fill="#c8923a"/>
+  <circle cx="163" cy="129" r="3" fill="#c8923a"/>
+
+  <!-- interceptor arc rising to crosshair (ochre) -->
+  <path d="M160 138 Q170 80 214 56" fill="none" stroke="#c8923a" stroke-width="3" stroke-linecap="round"/>
+  <!-- crosshair target -->
+  <circle cx="214" cy="50" r="13" fill="none" stroke="#c8923a" stroke-width="3"/>
+  <line x1="214" y1="33" x2="214" y2="67" stroke="#c8923a" stroke-width="3"/>
+  <line x1="197" y1="50" x2="231" y2="50" stroke="#c8923a" stroke-width="3"/>
+
+  <!-- incoming enemy missile + trail (oxblood) -->
+  <line x1="40" y1="14" x2="96" y2="78" stroke="#9b3a22" stroke-width="3" stroke-linecap="round"/>
+  <circle cx="96" cy="78" r="6" fill="#9b3a22"/>
+
+  <!-- blast cloud (top-right) -->
+  <circle cx="262" cy="78" r="17" fill="#9b3a22"/>
+  <circle cx="262" cy="78" r="9" fill="#c8923a"/>
+</svg>

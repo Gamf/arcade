@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 200">
+  <rect width="320" height="200" fill="#efe6d2"/>
+  <rect x="22" y="22" width="276" height="156" rx="14" fill="#f3ece0"/>
+  <!-- coiled snake body: rounded segment blocks tracing a spiral -->
+  <g fill="#6f6a3b">
+    <rect x="86" y="66" width="22" height="22" rx="6"/>
+    <rect x="110" y="66" width="22" height="22" rx="6"/>
+    <rect x="134" y="66" width="22" height="22" rx="6"/>
+    <rect x="158" y="66" width="22" height="22" rx="6"/>
+    <rect x="182" y="66" width="22" height="22" rx="6"/>
+    <rect x="182" y="90" width="22" height="22" rx="6"/>
+    <rect x="182" y="114" width="22" height="22" rx="6"/>
+    <rect x="158" y="114" width="22" height="22" rx="6"/>
+    <rect x="134" y="114" width="22" height="22" rx="6"/>
+    <rect x="110" y="114" width="22" height="22" rx="6"/>
+    <rect x="86" y="114" width="22" height="22" rx="6"/>
+    <rect x="86" y="90" width="22" height="22" rx="6"/>
+  </g>
+  <!-- snake head -->
+  <rect x="62" y="90" width="22" height="22" rx="6" fill="#221f17"/>
+  <circle cx="68" cy="98" r="2.6" fill="#efe6d2"/>
+  <circle cx="78" cy="98" r="2.6" fill="#efe6d2"/>
+  <!-- food pip: apple -->
+  <circle cx="252" cy="100" r="14" fill="#9b3a22"/>
+  <rect x="250" y="80" width="4" height="10" rx="2" fill="#221f17"/>
+  <path d="M254 84 q12 -6 16 4 q-12 4 -16 -4 z" fill="#6f6a3b"/>
+</svg>

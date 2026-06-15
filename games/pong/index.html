@@ -69,8 +69,8 @@
     // warm 1970s print-catalogue palette
     const OXBLOOD='#9b3a22', OCHRE='#c8923a', OLIVE='#6f6a3b', CLAY='#a4623a',
           BROWN='#4a3b2a', INK='#221f17', CREAM='#efe6d2';
-    // legacy aliases mapped onto warm tones
-    const RED=CLAY, AMBER=OLIVE, BONE=INK, BG=CREAM;
+    // spark colours that read on the dark Pong court (bright, flat — no glow)
+    const RED='#d6724a', AMBER='#e2b35a', BONE='#e9e6da', BG=CREAM;
     const canvas=document.getElementById('c'), ctx=canvas.getContext('2d');
     let W,H,dpr;
     function resize(){ dpr=Math.min(devicePixelRatio||1,2); W=innerWidth; H=innerHeight;
@@ -238,48 +238,51 @@
 
     function roundRect(x,y,w,h,r){ ctx.beginPath(); ctx.roundRect(x,y,w,h,r); }
 
+    // classic-Pong court palette: a calm matte charcoal court with bone-white
+    // paddles, ball and dashed net — the recognisable signature of the original.
+    const COURT='#1d211f', COURT_LINE='#3a423d', PONG_WHITE='#e9e6da';
     function render(){
-      // clean cream backdrop
+      // warm page backdrop around the court card
       ctx.fillStyle=CREAM; ctx.fillRect(0,0,W,H);
-      // play field card — flat warm paper, slightly lighter than page
+      // play field card — flat matte dark court (classic Pong screen)
       ctx.save();
       roundRect(field.x,field.y,field.w,field.h,10); ctx.clip();
-      ctx.fillStyle='#f3ece0';
+      ctx.fillStyle=COURT;
       ctx.fillRect(field.x,field.y,field.w,field.h);
       ctx.restore();
-      // field border (matte ink line)
-      ctx.save(); ctx.strokeStyle=BROWN; ctx.lineWidth=2;
+      // field border (subtle line on the court)
+      ctx.save(); ctx.strokeStyle=COURT_LINE; ctx.lineWidth=2;
       roundRect(field.x,field.y,field.w,field.h,10); ctx.stroke(); ctx.restore();
-      // center net (dashed, printed)
-      ctx.save(); ctx.globalAlpha=0.5; ctx.fillStyle=OLIVE;
+      // center net — the iconic white dashed divider
+      ctx.save(); ctx.globalAlpha=0.75; ctx.fillStyle=PONG_WHITE;
       const cx=field.x+field.w/2;
       for(let y=field.y+8;y<field.y+field.h-8;y+=26) ctx.fillRect(cx-2,y,4,14);
       ctx.restore();
-      // big center score (faint catalogue numerals)
-      ctx.save(); ctx.globalAlpha=0.12; ctx.fillStyle=INK;
+      // big center score (faint white numerals, like the original CRT digits)
+      ctx.save(); ctx.globalAlpha=0.14; ctx.fillStyle=PONG_WHITE;
       ctx.font='900 120px Fraunces, system-ui'; ctx.textAlign='center'; ctx.textBaseline='middle';
       ctx.fillText(youScore, field.x+field.w*0.30, field.y+field.h/2);
       ctx.fillText(cpuScore, field.x+field.w*0.70, field.y+field.h/2);
       ctx.restore();
-      // player paddle (olive)
-      paddle(player, OLIVE);
-      // ai paddle (clay)
-      paddle(ai, CLAY);
-      // ball (oxblood — the single accent, matte printed ink)
-      ctx.save(); ctx.fillStyle=OXBLOOD;
-      ctx.beginPath(); ctx.arc(ball.x,ball.y,ball.r,0,7); ctx.fill(); ctx.restore();
+      // both paddles bone-white — the familiar Pong bars
+      paddle(player, PONG_WHITE);
+      paddle(ai, PONG_WHITE);
+      // ball — square white pip, exactly like the original
+      ctx.save(); ctx.fillStyle=PONG_WHITE;
+      ctx.fillRect(ball.x-ball.r, ball.y-ball.r, ball.r*2, ball.r*2);
+      ctx.restore();
       // particles (flat, no glow)
       particles.forEach(p=>{ ctx.save(); ctx.globalAlpha=Math.max(0,p.life); ctx.fillStyle=p.color;
         ctx.beginPath(); ctx.arc(p.x,p.y,2.6*p.life,0,7); ctx.fill(); ctx.restore(); });
       // serve prompt
       if(alive&&serving&&!paused){ ctx.save(); ctx.globalAlpha=0.55+0.25*Math.sin(t/12);
-        ctx.fillStyle=INK; ctx.font='800 15px Archivo, system-ui'; ctx.textAlign='center';
+        ctx.fillStyle=PONG_WHITE; ctx.font='800 15px Archivo, system-ui'; ctx.textAlign='center';
         ctx.fillText('SERVE TO START', field.x+field.w/2, field.y+field.h/2+ball.r+34); ctx.restore(); }
     }
 
     function paddle(p, base){
-      // flat matte block of warm ink
-      ctx.save(); ctx.fillStyle=base; roundRect(p.x,p.y,p.w,p.h,7); ctx.fill(); ctx.restore();
+      // flat matte bar — square corners read truer to the original than rounded
+      ctx.save(); ctx.fillStyle=base; ctx.fillRect(p.x,p.y,p.w,p.h); ctx.restore();
     }
 
     // How-to-play overlay

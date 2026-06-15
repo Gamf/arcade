@@ -1,0 +1,40 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 200" width="320" height="200">
+  <!-- ground / banks -->
+  <rect width="320" height="200" fill="#efe6d2"/>
+  <rect x="0" y="0" width="320" height="34" fill="#6f6a3b"/>
+  <rect x="0" y="166" width="320" height="34" fill="#6f6a3b"/>
+  <!-- river band -->
+  <rect x="0" y="34" width="320" height="56" fill="#c8923a"/>
+  <!-- road band -->
+  <rect x="0" y="90" width="320" height="76" fill="#221f17"/>
+  <!-- lane dashes -->
+  <g fill="#c8923a">
+    <rect x="20" y="126" width="26" height="5"/>
+    <rect x="66" y="126" width="26" height="5"/>
+    <rect x="112" y="126" width="26" height="5"/>
+    <rect x="158" y="126" width="26" height="5"/>
+    <rect x="204" y="126" width="26" height="5"/>
+    <rect x="250" y="126" width="26" height="5"/>
+    <rect x="296" y="126" width="20" height="5"/>
+  </g>
+  <!-- logs on the river -->
+  <rect x="36" y="50" width="96" height="24" rx="11" fill="#6f6a3b"/>
+  <rect x="200" y="50" width="84" height="24" rx="11" fill="#9b3a22"/>
+  <!-- cars on the road -->
+  <rect x="40" y="96" width="60" height="24" rx="7" fill="#9b3a22"/>
+  <rect x="220" y="138" width="60" height="24" rx="7" fill="#c8923a"/>
+  <!-- goal nests in the top bank -->
+  <rect x="60" y="6" width="22" height="22" rx="5" fill="#221f17"/>
+  <rect x="238" y="6" width="22" height="22" rx="5" fill="#221f17"/>
+  <!-- the frog (oxblood body, ochre eyes) centred on a log -->
+  <g>
+    <ellipse cx="160" cy="66" rx="20" ry="9" fill="#221f17" opacity="0.18"/>
+    <rect x="142" y="44" width="36" height="30" rx="11" fill="#9b3a22"/>
+    <rect x="134" y="58" width="12" height="16" rx="4" fill="#9b3a22"/>
+    <rect x="174" y="58" width="12" height="16" rx="4" fill="#9b3a22"/>
+    <circle cx="152" cy="48" r="6" fill="#efe6d2"/>
+    <circle cx="168" cy="48" r="6" fill="#efe6d2"/>
+    <circle cx="152" cy="48" r="2.6" fill="#221f17"/>
+    <circle cx="168" cy="48" r="2.6" fill="#221f17"/>
+  </g>
+</svg>

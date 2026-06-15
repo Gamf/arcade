@@ -76,7 +76,9 @@
     // play field is a centered column so it looks good on wide screens too
     let field={x:0,y:0,w:0,h:0};
     const COLS=8;
-    const ROW_COLORS=['#a4623a','#c8923a','#6f6a3b','#4a3b2a','#a4623a','#c8923a','#6f6a3b'];
+    // Iconic Breakout rainbow bands (top rows score highest): red, orange, amber,
+    // gold, green, teal, blue — our own flat matte takes on the classic colour ladder.
+    const ROW_COLORS=['#c2402a','#cf6a2c','#d8922f','#cdb23a','#5f8a46','#3f8d86','#3a6aa0'];
     let brickW=0, brickH=22, brickGap=6, topPad=70;
 
     const paddle={ w:0, h:16, x:0, y:0 };
@@ -193,11 +195,11 @@
 
     function roundedBrick(r,color,frac){
       ctx.save();
-      // flat matte ink fill; damaged bricks read slightly lighter
-      ctx.globalAlpha=0.65+0.35*frac; ctx.fillStyle=color;
+      // flat matte fill; damaged bricks read slightly dimmer (still solid colour)
+      ctx.globalAlpha=0.78+0.22*frac; ctx.fillStyle=color;
       ctx.beginPath(); ctx.roundRect(r.x,r.y,r.w,r.h,6); ctx.fill();
       // soft cream top stripe for a printed-ink highlight (no glow)
-      ctx.globalAlpha=0.18; ctx.fillStyle='#efe6d2';
+      ctx.globalAlpha=0.22; ctx.fillStyle='#efe6d2';
       ctx.beginPath(); ctx.roundRect(r.x+2,r.y+2,r.w-4,r.h*0.4,4); ctx.fill();
       ctx.restore();
     }
@@ -221,13 +223,17 @@
     function render(){
       // clean solid warm cream page (no gradient, no moving glow blobs)
       ctx.fillStyle='#efe6d2'; ctx.fillRect(0,0,W,H);
+      // playfield interior — calm matte slate panel so the rainbow brick bands read
+      // as classic Breakout (the original's dark cabinet screen), no glow/gradient.
+      ctx.save(); ctx.fillStyle='#27241d';
+      ctx.beginPath(); ctx.roundRect(field.x,2,field.w,H-4,10); ctx.fill(); ctx.restore();
       // field border — flat warm-brown rule, no glow
-      ctx.save(); ctx.globalAlpha=0.35; ctx.strokeStyle='#4a3b2a'; ctx.lineWidth=2;
+      ctx.save(); ctx.globalAlpha=0.5; ctx.strokeStyle='#4a3b2a'; ctx.lineWidth=2;
       ctx.beginPath(); ctx.roundRect(field.x,2,field.w,H-4,10); ctx.stroke(); ctx.restore();
       // bricks
       for(const b of bricks){ if(!b.alive) continue; roundedBrick(brickRect(b),b.color,b.hp/b.max); }
-      // paddle — flat olive ink, no glow
-      ctx.save(); ctx.fillStyle='#6f6a3b';
+      // paddle — flat warm bar, no glow (reads as the classic player paddle)
+      ctx.save(); ctx.fillStyle='#cdb23a';
       ctx.beginPath(); ctx.roundRect(paddle.x,paddle.y,paddle.w,paddle.h,9); ctx.fill(); ctx.restore();
       // ball — the one oxblood accent, flat matte, no glow
       ctx.save(); ctx.fillStyle='#9b3a22';
@@ -237,7 +243,7 @@
         ctx.beginPath(); ctx.arc(p.x,p.y,2.6*p.life,0,7); ctx.fill(); ctx.restore(); });
       // "tap to launch" prompt
       if(alive&&!launched&&!paused){ ctx.save(); ctx.globalAlpha=0.5+0.3*Math.sin(t/12);
-        ctx.fillStyle='#4a3b2a'; ctx.font='600 15px system-ui'; ctx.textAlign='center';
+        ctx.fillStyle='#e7dcc4'; ctx.font='600 15px system-ui'; ctx.textAlign='center';
         ctx.fillText('Launch button or Space to launch', field.x+field.w/2, paddle.y-30); ctx.restore(); }
     }
 

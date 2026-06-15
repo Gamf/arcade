@@ -1,0 +1,38 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 200">
+  <!-- sky / page -->
+  <rect width="320" height="200" fill="#efe6d2"/>
+  <!-- sun -->
+  <circle cx="62" cy="50" r="26" fill="#c8923a"/>
+  <!-- drifting cloud -->
+  <g fill="#f3ece0">
+    <circle cx="232" cy="44" r="16"/>
+    <circle cx="250" cy="48" r="13"/>
+    <circle cx="216" cy="50" r="12"/>
+    <rect x="216" y="48" width="40" height="12"/>
+  </g>
+  <!-- green pipes (the icon of the game) -->
+  <!-- left pipe pair -->
+  <rect x="40" y="0" width="44" height="58" fill="#6f6a3b"/>
+  <rect x="34" y="52" width="56" height="16" rx="3" fill="#6f6a3b"/>
+  <rect x="40" y="150" width="44" height="50" fill="#6f6a3b"/>
+  <rect x="34" y="138" width="56" height="16" rx="3" fill="#6f6a3b"/>
+  <!-- right pipe pair -->
+  <rect x="244" y="0" width="44" height="86" fill="#6f6a3b"/>
+  <rect x="238" y="80" width="56" height="16" rx="3" fill="#6f6a3b"/>
+  <rect x="244" y="174" width="44" height="26" fill="#6f6a3b"/>
+  <rect x="238" y="162" width="56" height="16" rx="3" fill="#6f6a3b"/>
+  <!-- ground band -->
+  <rect x="0" y="184" width="320" height="16" fill="#9b3a22"/>
+  <!-- the round flying bird -->
+  <g transform="translate(160,100) rotate(-12)">
+    <ellipse cx="0" cy="0" rx="30" ry="27" fill="#c8923a"/>
+    <ellipse cx="3" cy="9" rx="17" ry="10" fill="#f3ece0"/>
+    <!-- wing -->
+    <ellipse cx="-7" cy="2" rx="17" ry="11" fill="#a4623a"/>
+    <!-- beak -->
+    <polygon points="24,-4 46,1 24,8" fill="#9b3a22"/>
+    <!-- eye -->
+    <circle cx="11" cy="-10" r="9" fill="#f3ece0"/>
+    <circle cx="14" cy="-10" r="4.5" fill="#221f17"/>
+  </g>
+</svg>

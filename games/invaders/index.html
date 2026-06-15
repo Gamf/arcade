@@ -15,7 +15,7 @@
       -webkit-user-select:none;user-select:none}
     .wrap{height:100%;display:flex;align-items:center;justify-content:center;
       padding:env(safe-area-inset-top) 10px env(safe-area-inset-bottom)}
-    canvas{background:#2a2118;border-radius:14px;touch-action:none;
+    canvas{background:#0e1410;border-radius:14px;touch-action:none;
       box-shadow:0 10px 40px rgba(34,31,23,.35),0 0 0 1px rgba(74,59,42,.5)}
   </style>
 </head>
@@ -256,16 +256,16 @@
       for(let i=bullets.length-1;i>=0;i--){
         const b=bullets[i]; let gone=false;
         if(b.y<-10){ bullets.splice(i,1); continue; }
-        if(hitBarrier(b.x,b.y)){ burst(b.x,b.y,'#6f6a3b',5); bullets.splice(i,1); continue; }
+        if(hitBarrier(b.x,b.y)){ burst(b.x,b.y,'#3fae5a',5); bullets.splice(i,1); continue; }
         if(ufo && hitRect(b.x,b.y,ufo)){
-          setScore(score+ufo.score); burst(ufo.x,ufo.y,'#c8923a',18); ufo=null; ufoTimer=10+rnd()*7;
+          setScore(score+ufo.score); burst(ufo.x,ufo.y,'#d8442c',18); ufo=null; ufoTimer=10+rnd()*7;
           bullets.splice(i,1); continue;
         }
         for(const a of liveAliens){
           if(a.alive && hitRect(b.x,b.y,a)){
             a.alive=false; gone=true;
             setScore(score + (a.type===2?40:a.type===1?20:10));
-            burst(a.x,a.y, a.type===2?'#9b3a22':a.type===1?'#a4623a':'#c8923a',14);
+            burst(a.x,a.y, a.type===2?'#7fe3a0':a.type===1?'#3fae5a':'#aef0c2',14);
             break;
           }
         }
@@ -277,12 +277,12 @@
       for(let i=bombs.length-1;i>=0;i--){
         const b=bombs[i];
         if(b.y>H+10){ bombs.splice(i,1); continue; }
-        if(hitBarrier(b.x,b.y)){ burst(b.x,b.y,'#6f6a3b',5); bombs.splice(i,1); continue; }
+        if(hitBarrier(b.x,b.y)){ burst(b.x,b.y,'#3fae5a',5); bombs.splice(i,1); continue; }
         // collide with a player bullet
         let canceled=false;
         for(let j=bullets.length-1;j>=0;j--){
           if(Math.abs(bullets[j].x-b.x)<6 && Math.abs(bullets[j].y-b.y)<10){
-            burst(b.x,b.y,'#efe6d2',6); bullets.splice(j,1); canceled=true; break;
+            burst(b.x,b.y,'#f3ece0',6); bullets.splice(j,1); canceled=true; break;
           }
         }
         if(canceled){ bombs.splice(i,1); continue; }
@@ -319,75 +319,100 @@
     // ---- render ----
     function drawAlien(a,t){
       ctx.save();
-      const col=a.type===2?'#9b3a22':a.type===1?'#a4623a':'#c8923a';
+      // Iconic Space Invaders green; three distinct row creatures (squid / crab /
+      // chunky bug) in original simple shapes, with the classic 2-frame wiggle.
+      const col=a.type===2?'#7fe3a0':a.type===1?'#3fae5a':'#aef0c2';
       ctx.fillStyle=col;
-      const x=a.x, y=a.y, wob=a.anim?1:-1;
-      // body
-      ctx.beginPath(); ctx.roundRect(x-9,y-7,18,12,4); ctx.fill();
-      // eyes
-      ctx.fillStyle='#2a2118';
-      ctx.beginPath(); ctx.arc(x-4,y-1,1.6,0,7); ctx.arc(x+4,y-1,1.6,0,7); ctx.fill();
-      // legs (animate)
-      ctx.fillStyle=col;
-      ctx.fillRect(x-8,y+5,3,4+wob); ctx.fillRect(x-1.5,y+5,3,4-wob); ctx.fillRect(x+5,y+5,3,4+wob);
+      const x=a.x, y=a.y, f=a.anim?1:0;            // f = animation frame
+      if(a.type===2){
+        // top row — "squid": tall head + two dangling tentacles
+        ctx.fillRect(x-3,y-7,6,3);                 // head top
+        ctx.fillRect(x-6,y-4,12,5);                // head body
+        ctx.fillRect(x-7,y+1,14,2);               // brow
+        // tentacles wiggle between frames
+        if(f){ ctx.fillRect(x-6,y+3,2,4); ctx.fillRect(x-1,y+3,2,3); ctx.fillRect(x+4,y+3,2,4); }
+        else { ctx.fillRect(x-7,y+3,2,3); ctx.fillRect(x-1,y+3,2,4); ctx.fillRect(x+5,y+3,2,3); }
+      } else if(a.type===1){
+        // middle row — "crab": wide body + side arms that flip up/down
+        ctx.fillRect(x-8,y-3,16,6);                // body
+        ctx.fillRect(x-5,y-6,10,3);                // forehead
+        if(f){ ctx.fillRect(x-9,y-6,2,3); ctx.fillRect(x+7,y-6,2,3);   // arms up
+               ctx.fillRect(x-7,y+3,2,3); ctx.fillRect(x+5,y+3,2,3); }
+        else { ctx.fillRect(x-9,y+1,2,4); ctx.fillRect(x+7,y+1,2,4);   // arms down
+               ctx.fillRect(x-5,y+3,2,3); ctx.fillRect(x+3,y+3,2,3); }
+      } else {
+        // bottom rows — "bug": chunky rounded body + little feet
+        ctx.beginPath(); ctx.roundRect(x-8,y-6,16,11,4); ctx.fill();
+        if(f){ ctx.fillRect(x-7,y+5,3,2); ctx.fillRect(x+4,y+5,3,2); }
+        else { ctx.fillRect(x-4,y+5,3,3); ctx.fillRect(x+1,y+5,3,3); }
+      }
+      // eyes — dark voids read on every creature
+      ctx.fillStyle='#0e1410';
+      ctx.beginPath(); ctx.arc(x-3.5,y-1,1.5,0,7); ctx.arc(x+3.5,y-1,1.5,0,7); ctx.fill();
       ctx.restore();
     }
 
     function draw(t){
       ctx.clearRect(0,0,W,H);
-      // backdrop — clean solid warm dusk
-      ctx.fillStyle='#2a2118'; ctx.fillRect(0,0,W,H);
+      // backdrop — deep matte space (Space Invaders' signature black void, warmed)
+      ctx.fillStyle='#0e1410'; ctx.fillRect(0,0,W,H);
+      // ground line near the cannon, like the original cabinet's base bar
+      ctx.fillStyle='#3fae5a'; ctx.fillRect(0,H-26,W,2);
 
-      // barriers
+      // barriers — classic Space Invaders green shields
       for(const cells of barriers){
         for(const c of cells){
           if(c.hp<=0) continue;
-          ctx.fillStyle=c.hp>=2?'#6f6a3b':'#4a3b2a';
+          ctx.fillStyle=c.hp>=2?'#3fae5a':'#27713a';
           ctx.fillRect(c.x,c.y,4,4);
         }
       }
 
-      // ufo
+      // ufo — the classic red mystery saucer
       if(ufo){
-        ctx.save(); ctx.fillStyle='#c8923a';
-        ctx.beginPath(); ctx.ellipse(ufo.x,ufo.y,13,5,0,0,7); ctx.fill();
-        ctx.fillStyle='#efe6d2';
-        ctx.beginPath(); ctx.ellipse(ufo.x,ufo.y-3,6,3,0,0,7); ctx.fill();
+        ctx.save(); ctx.fillStyle='#d8442c';
+        ctx.beginPath(); ctx.ellipse(ufo.x,ufo.y+1,13,4,0,0,7); ctx.fill();
+        ctx.beginPath(); ctx.ellipse(ufo.x,ufo.y-2,7,4,0,0,7); ctx.fill();
+        // little portholes
+        ctx.fillStyle='#0e1410';
+        for(let i=-2;i<=2;i++){ ctx.beginPath(); ctx.arc(ufo.x+i*4,ufo.y+1,1,0,7); ctx.fill(); }
         ctx.restore();
       }
 
       // aliens
       for(const a of aliens) if(a.alive) drawAlien(a,t);
 
-      // player — oxblood accent (most important element)
+      // player — the classic green laser cannon: flat base + central turret
       if(alive){
-        ctx.save(); ctx.fillStyle='#9b3a22';
+        ctx.save(); ctx.fillStyle='#3fae5a';
         const px=player.x, py=player.y;
-        ctx.beginPath();
-        ctx.moveTo(px,py-9); ctx.lineTo(px+14,py+6); ctx.lineTo(px+9,py+6);
-        ctx.lineTo(px+9,py+2); ctx.lineTo(px-9,py+2); ctx.lineTo(px-9,py+6);
-        ctx.lineTo(px-14,py+6); ctx.closePath(); ctx.fill();
-        ctx.fillStyle='#efe6d2'; ctx.fillRect(px-2,py-7,4,5);
+        ctx.beginPath(); ctx.roundRect(px-14,py+1,28,6,2); ctx.fill();   // wide base
+        ctx.fillRect(px-7,py-1,14,3);                                    // mound
+        ctx.fillRect(px-2,py-7,4,6);                                     // turret barrel
+        ctx.fillStyle='#aef0c2'; ctx.fillRect(px-1.5,py-7,3,4);          // barrel highlight
         ctx.restore();
       }
 
-      // bullets
-      ctx.fillStyle='#efe6d2';
+      // bullets — white cannon shot (classic), zig-zag alien bombs
+      ctx.fillStyle='#f3ece0';
       for(const b of bullets){ ctx.fillRect(b.x-1.5,b.y-7,3,10); }
-      ctx.fillStyle='#c8923a';
-      for(const b of bombs){ ctx.fillRect(b.x-1.5,b.y-5,3,9); }
+      ctx.fillStyle='#7fe3a0';
+      for(const b of bombs){
+        const seg=(Math.floor(b.y/4)&1)?2:-2;
+        ctx.fillRect(b.x-1.5+seg*0.5,b.y-5,3,9);
+      }
 
       // particles
       for(const p of particles){ ctx.globalAlpha=Math.max(0,p.life); ctx.fillStyle=p.color;
         ctx.beginPath(); ctx.arc(p.x,p.y,2.2*p.life+0.5,0,7); ctx.fill(); }
       ctx.globalAlpha=1;
 
-      // lives indicators
+      // lives indicators — little green cannons, like the original
       for(let i=0;i<lives;i++){
         const lx=14+i*18, ly=H-12;
-        ctx.fillStyle='#9b3a22';
-        ctx.beginPath(); ctx.moveTo(lx,ly-6); ctx.lineTo(lx+6,ly+3); ctx.lineTo(lx-6,ly+3);
-        ctx.closePath(); ctx.fill();
+        ctx.fillStyle='#3fae5a';
+        ctx.fillRect(lx-6,ly+1,12,3);     // base
+        ctx.fillRect(lx-1.5,ly-3,3,4);    // turret
       }
     }
 

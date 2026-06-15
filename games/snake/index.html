@@ -15,7 +15,7 @@
       -webkit-user-select:none;user-select:none}
     .wrap{height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;
       padding:env(safe-area-inset-top) 12px env(safe-area-inset-bottom)}
-    canvas{background:#efe6d2;border-radius:14px;touch-action:none;
+    canvas{background:#22321f;border-radius:14px;touch-action:none;
       box-shadow:0 6px 18px rgba(34,31,23,.18),0 0 0 1px rgba(74,59,42,.18)}
   </style>
 </head>
@@ -106,10 +106,10 @@
     function tick(){ if(!alive||paused||helpOpen) return; dir=nextDir;
       const head={x:snake[0].x+dir.x, y:snake[0].y+dir.y};
       if(head.x<0||head.x>=N||head.y<0||head.y>=N||snake.some(s=>s.x===head.x&&s.y===head.y)){
-        burst((head.x+.5)*cell,(head.y+.5)*cell,'#9b3a22',22); return end(); }
+        burst((head.x+.5)*cell,(head.y+.5)*cell,'#c8443a',22); return end(); }
       snake.unshift(head);
       if(head.x===food.x&&head.y===food.y){ score++; document.getElementById('score').textContent=score;
-        burst((food.x+.5)*cell,(food.y+.5)*cell,'#c8923a',16);
+        burst((food.x+.5)*cell,(food.y+.5)*cell,'#7bbb4a',16);
         placeFood(); if(speed>60){ speed-=4; clearInterval(timer); timer=setInterval(tick,speed); } }
       else snake.pop(); }
 
@@ -117,16 +117,24 @@
       ctx.fillStyle=c; ctx.beginPath(); ctx.roundRect(p+1,q+1,cell-2,cell-2,r); ctx.fill(); }
 
     function draw(){ const S=N*cell;
-      // solid warm cream board
-      ctx.fillStyle='#efe6d2'; ctx.fillRect(0,0,S,S);
-      // food — oxblood accent (the one important element), matte flat ink
-      cellRect(food.x,food.y,'#9b3a22',cell/2);
-      // snake — warm earth tones, olive body fading to clay, warm brown head
-      snake.forEach((s,i)=>{ const t=i/Math.max(1,snake.length-1);
-        const col=i===0?'#4a3b2a'
-          :`rgb(${Math.round(111+(164-111)*t)},${Math.round(106+(98-106)*t)},${Math.round(59+(58-59)*t)})`;
+      // classic Snake board — calm matte dark-green playfield
+      ctx.fillStyle='#22321f'; ctx.fillRect(0,0,S,S);
+      // subtle flat checker so the grid reads, no glow
+      ctx.fillStyle='#283a24';
+      for(let y=0;y<N;y++) for(let x=0;x<N;x++) if((x+y)&1) ctx.fillRect(x*cell,y*cell,cell,cell);
+      // food — a round red apple pip, the classic target
+      cellRect(food.x,food.y,'#c8443a',cell/2);
+      // snake — bright matte green segmented body, darker green head
+      snake.forEach((s,i)=>{
+        const col=i===0?'#4e7d36':(i&1?'#7bbb4a':'#6aa840');
         cellRect(s.x,s.y,col,5); });
-      // particles — flat warm dots, no glow
+      // head eye dots so the snake reads as a creature facing its heading
+      if(snake.length){ const h=snake[0], cx=h.x*cell, cy=h.y*cell, r=Math.max(1.5,cell*0.09);
+        const fx=dir.x, fy=dir.y; const ox=fy!==0?cell*0.3:0, oy=fx!==0?cell*0.3:0;
+        const ex=cx+cell*0.5+fx*cell*0.18, ey=cy+cell*0.5+fy*cell*0.18;
+        ctx.fillStyle='#22321f'; ctx.beginPath();
+        ctx.arc(ex-ox, ey-oy, r, 0, 7); ctx.arc(ex+ox, ey+oy, r, 0, 7); ctx.fill(); }
+      // particles — flat dots, no glow
       particles.forEach(p=>{ ctx.save(); ctx.globalAlpha=Math.max(0,p.life); ctx.fillStyle=p.color;
         ctx.beginPath(); ctx.arc(p.x,p.y,2.5*p.life,0,7); ctx.fill(); ctx.restore(); }); }
 

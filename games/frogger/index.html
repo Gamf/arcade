@@ -73,11 +73,24 @@
   <script type="module">
 
     const SLUG='frogger', BEST_KEY='gamf-arcade-'+SLUG+'-best';
-    // palette — warm 1970s print catalogue (matte earth tones, no glow/neon)
-    const BG='#efe6d2', CREAM='#efe6d2', BONE='#efe6d2', INK='#221f17';
-    const OXBLOOD='#9b3a22', OCHRE='#c8923a', OLIVE='#6f6a3b', CLAY='#a4623a', BROWN='#4a3b2a';
-    const SCREEN='#e3d8be', LINE='#4a3b2a', WATER='#c2c4a8', ROAD='#cdb893';
-    const GRASS='#b9bd92', LOG='#6f5a3c', LOGTOP='#8a6f48', FROG='#9b3a22', FROGDK='#7a2c19';
+    // palette — Frogger's iconic scene rendered MATTE (no neon/glow):
+    //   dark asphalt road · deep blue river · green banks · bright green frog.
+    // Recognisability beats the warm-only palette here, but every tone is
+    // flat & desaturated so it still reads as a calm print illustration.
+    const BG='#efe6d2', CREAM='#efe6d2', BONE='#e9dcc0', INK='#221f17';
+    const OXBLOOD='#9b3a22', OCHRE='#c8923a', OLIVE='#6f6a3b', CLAY='#a4623a', BROWN='#3f2f1f';
+    const SCREEN='#e3d8be', LINE='#221f17';
+    // Frogger signature backdrops, matte:
+    const WATER='#2f5d7c';        // deep matte river blue
+    const WATERLINE='#5a86a0';    // soft ripple line
+    const ROAD='#2b2823';         // dark asphalt
+    const ROADLINE='#d9c178';     // warm dashed lane marker
+    const GRASS='#5f7d3a';        // green bank/median
+    const GRASSDK='#4a6730';
+    const LOG='#6f5a3c', LOGTOP='#8a6f48';
+    const FROG='#7bbd3e', FROGDK='#4e8a26'; // classic Frogger green
+    // vehicle colours — flat, a few distinct hues like the arcade traffic
+    const CARS=['#c64a33','#d7a23a','#8a6cae','#4fa0a8','#cf6f3a'];
 
     // seeded LCG — no Math.random / Date
     let seed=20260613>>>0;
@@ -281,37 +294,42 @@
       for(let i=0;i<ROWS;i++){
         const L=LANES[i]; const y=i*cell;
         let c=ROAD;
-        if(!L) c=SCREEN;
+        if(!L) c=GRASS;
         else if(L.type==='goal') c=GRASS;
         else if(L.type==='river') c=WATER;
         else if(L.type==='median'||L.type==='safe') c=GRASS;
         else c=ROAD;
         ctx.fillStyle=c; ctx.fillRect(0,y,W,cell);
-        // road lane dashes — matte ink, solid
+        // road lane dashes — warm yellow markers, matte
         if(L&&L.type==='road'){
-          ctx.strokeStyle=BONE; ctx.lineWidth=Math.max(1,cell*0.05);
-          ctx.setLineDash([cell*0.28,cell*0.28]);
+          ctx.strokeStyle=ROADLINE; ctx.lineWidth=Math.max(1,cell*0.06);
+          ctx.setLineDash([cell*0.3,cell*0.3]);
           ctx.beginPath(); ctx.moveTo(0,y+cell); ctx.lineTo(W,y+cell); ctx.stroke();
           ctx.setLineDash([]);
         }
-        // river edge — static printed ripple lines (no glow, no animation)
+        // river ripple lines — soft matte, no glow/animation
         if(L&&L.type==='river'){
-          ctx.save(); ctx.globalAlpha=0.5;
-          ctx.strokeStyle=OLIVE; ctx.lineWidth=1;
+          ctx.save(); ctx.globalAlpha=0.4;
+          ctx.strokeStyle=WATERLINE; ctx.lineWidth=1;
           for(let k=0;k<COLS;k++){ const wx=(k+0.5)*cell;
             ctx.beginPath(); ctx.moveTo(wx-cell*0.18,y+cell*0.6); ctx.lineTo(wx+cell*0.18,y+cell*0.6); ctx.stroke(); }
           ctx.restore();
+        }
+        // grass banks get a subtle darker stripe so the safe zones read as turf
+        if(L&&(L.type==='median'||L.type==='safe'||L.type==='goal')){
+          ctx.fillStyle=GRASSDK; ctx.globalAlpha=0.5;
+          ctx.fillRect(0,y+cell*0.72,W,cell*0.08); ctx.globalAlpha=1;
         }
       }
       // top edge accent under HUD on goal row
       ctx.fillStyle=LINE; ctx.fillRect(0,cell-2,W,2);
 
-      // goal slots
+      // goal "homes" — green bays cut into the bank, classic Frogger nests
       for(let g=0;g<goalCols.length;g++){
         const gx=goalCols[g]*cell, gy=0;
-        ctx.fillStyle=goals[g]?CREAM:SCREEN;
+        ctx.fillStyle=goals[g]?GRASSDK:'#1f3a4c';   // filled=dark turf, empty=dark bay
         roundedRect(gx+cell*0.06,gy+cell*0.06,cell*0.88,cell*0.88,cell*0.18); ctx.fill();
-        ctx.strokeStyle=goals[g]?OXBLOOD:OLIVE; ctx.lineWidth=Math.max(1.5,cell*0.06);
+        ctx.strokeStyle=goals[g]?FROGDK:OCHRE; ctx.lineWidth=Math.max(1.5,cell*0.07);
         roundedRect(gx+cell*0.06,gy+cell*0.06,cell*0.88,cell*0.88,cell*0.18); ctx.stroke();
         if(goals[g]) drawFrog(goalCols[g],0);
       }
@@ -323,11 +341,11 @@
         if(ln.type==='road'){
           ln.objs.forEach((o,k)=>{
             const x=o.x*cell, w=o.w*cell;
-            // car body — matte earth tones alternating clay/ochre by lane
-            const col=(i%2===0)?CLAY:OCHRE;
-            ctx.fillStyle=col; roundedRect(x+cell*0.08,y+cell*0.16,w-cell*0.16,cell*0.68,cell*0.16); ctx.fill();
-            // windshield
-            ctx.fillStyle=BROWN;
+            // car body — flat distinct hue per lane, like arcade traffic
+            ctx.fillStyle=CARS[i%CARS.length];
+            roundedRect(x+cell*0.08,y+cell*0.16,w-cell*0.16,cell*0.68,cell*0.16); ctx.fill();
+            // windshield — pale cabin glass, faces the travel direction
+            ctx.fillStyle=BONE;
             const wd=Math.min(w*0.3,cell*0.4);
             const wx = ln.dir>0 ? x+w-cell*0.16-wd : x+cell*0.16;
             roundedRect(wx,y+cell*0.26,wd,cell*0.34,cell*0.08); ctx.fill();

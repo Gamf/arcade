@@ -76,10 +76,13 @@
   <script type="module">
     const SLUG='asteroids', BEST_KEY='gamf-arcade-'+SLUG+'-best';
     const canvas=document.getElementById('c'), ctx=canvas.getContext('2d');
-    // warm editorial palette — matte printed ink, no neon
-    const PAPER='#efe6d2',                       // cream stock backdrop
-          ACCENT='#9b3a22',                      // oxblood — the one accent (ship + bullets)
-          OCHRE='#c8923a', OLIVE='#6f6a3b', BROWN='#4a3b2a';
+    // Classic Asteroids identity: white vector line-art on matte space-black.
+    // Calm + flat — no glow/bloom, no starfield. Just crisp printed strokes.
+    const PAPER='#0d0e12',                        // matte space backdrop (deep ink, not pure #000)
+          ACCENT='#f1ede2',                       // bright vector white — ship + bullets
+          OCHRE='#c8923a',                        // thrust flame (warm ember)
+          OLIVE='#9aa0a6',                        // cool grey — wave-clear flash
+          BROWN='#b9b3a6';                        // weathered grey — asteroid outlines
     // role aliases used through the code: ACCENT=ship/shots, BROWN=rocks, OCHRE=thrust/spark, OLIVE=clear
     const BLUE=ACCENT, MINT=OLIVE, WARN=OCHRE;
 
@@ -294,10 +297,10 @@
         ctx.lineTo(-ship.r,3); ctx.closePath();
         ctx.moveTo(-ship.r,0); ctx.lineTo(-ship.r-rng(8,16),0); ctx.lineTo(-ship.r,-3); ctx.closePath();
         ctx.fill(); ctx.restore(); }
-      // hull — flat oxblood printed triangle (the one accent)
+      // hull — classic white vector triangle outline, barely-there fill
       ctx.lineJoin='round';
       ctx.strokeStyle=ACCENT; ctx.lineWidth=2.4;
-      ctx.fillStyle='rgba(155,58,34,.12)';
+      ctx.fillStyle='rgba(241,237,226,.08)';
       ctx.beginPath();
       ctx.moveTo(ship.r,0);
       ctx.lineTo(-ship.r,ship.r*0.72);
@@ -310,7 +313,7 @@
     function drawRock(rk){
       ctx.save(); ctx.translate(rk.x,rk.y); ctx.rotate(rk.a);
       ctx.strokeStyle=BROWN; ctx.lineWidth=2; ctx.lineJoin='round';
-      ctx.fillStyle='rgba(74,59,42,.10)';
+      ctx.fillStyle='rgba(185,179,166,.06)';
       ctx.beginPath();
       rk.shape.forEach((v,i)=>{ const px=Math.cos(v.ang)*v.rad, py=Math.sin(v.ang)*v.rad;
         i?ctx.lineTo(px,py):ctx.moveTo(px,py); });

@@ -71,10 +71,26 @@
       canvas.width=W*dpr; canvas.height=H*dpr; ctx.setTransform(dpr,0,0,dpr,0,0); layout(); }
     addEventListener('resize', resize);
 
-    // warm 1970s print-catalogue palette (matte, flat, no glow)
-    const C={ bg:'#efe6d2', bg2:'#e6dcc4', oxblood:'#9b3a22', ochre:'#c8923a',
+    // Doodle-Jump-inspired identity over a warm matte base: a lined
+    // notebook page as the backdrop, green platforms as the signature, with
+    // blue (moving) / brown (breakable) / spring variants. All flat & matte —
+    // our own simple shapes, no copied sprite art.
+    const C={ bg:'#efe6d2', bg2:'#e8e0cd', oxblood:'#9b3a22', ochre:'#c8923a',
       olive:'#6f6a3b', clay:'#a4623a', brown:'#4a3b2a', ink:'#221f17',
-      line:'#cabd9f', dim:'#8a7c5e' };
+      line:'#cabd9f', dim:'#8a7c5e',
+      // gameplay identity colours (recognisable signature)
+      plat:'#7caa3c',      // green platform (Doodle Jump signature)
+      platTop:'#9cc457',   // lighter green grass band
+      platEdge:'#4f6f25',  // darker green keyline
+      moveP:'#4f86c6',     // blue moving platform
+      moveTop:'#7fa9da',
+      breakP:'#9a6a3c',    // brown breakable platform
+      breakTop:'#b88a55',
+      hero:'#8fbf43',      // green creature
+      heroDk:'#5d8a2c',
+      ruleBlue:'#bcd0e0',  // faint notebook rule
+      ruleMargin:'#d8a59a' // faint pink margin line
+    };
 
     // seeded LCG for all randomness (no Math.random / clock)
     let seed=987654321;
@@ -101,10 +117,9 @@
     const GAP_MIN=58, GAP_MAX=104; // vertical spacing between platforms
 
     function platColor(type){
-      if(type==='spring') return C.ochre;
-      if(type==='move') return C.olive;
-      if(type==='fragile') return C.clay;
-      return C.brown;
+      if(type==='move') return C.moveP;      // blue moving platform
+      if(type==='fragile') return C.breakP;  // brown breakable platform
+      return C.plat;                          // green standard platform
     }
 
     function makePlatform(y){
@@ -148,7 +163,7 @@
     function burst(cx,cy,color,n,sp=3){ for(let i=0;i<n;i++){ const a=rnd()*Math.PI*2, s=0.6+rnd()*sp;
       particles.push({x:cx,y:cy,vx:Math.cos(a)*s,vy:Math.sin(a)*s,life:1,color,r:2+rnd()*2}); } }
 
-    function bounce(strength){ player.vy=strength; burst(player.x, player.y+player.r, C.brown, 8, 2); }
+    function bounce(strength){ player.vy=strength; burst(player.x, player.y+player.r, C.platEdge, 8, 2); }
 
     function gameOver(){
       state='over'; burst(player.x,player.y,C.oxblood,22,4);
@@ -242,7 +257,7 @@
              player.y+player.r > py && player.y+player.r < py+PH+player.vy){
             if(p.type==='spring'||p.spring){ bounce(SPRING); }
             else if(p.type==='fragile'){
-              if(!p.used){ bounce(JUMP); p.used=true; p.breaking=1; burst(p.x+p.w/2,py,C.clay,10,2.5); }
+              if(!p.used){ bounce(JUMP); p.used=true; p.breaking=1; burst(p.x+p.w/2,py,C.breakP,10,2.5); }
             } else { bounce(JUMP); }
             break;
           }
@@ -279,9 +294,23 @@
     function drawBackground(){
       // clean solid cream page
       ctx.fillStyle=C.bg; ctx.fillRect(0,0,W,H);
-      // subtle column panel so the play field reads on wide screens
+      // the play field is a lined notebook page — the Doodle Jump signature
+      // backdrop, rendered flat & matte (no glow, no texture noise)
       ctx.fillStyle=C.bg2; ctx.fillRect(field.x, 0, field.w, H);
-      // field side guides — thin matte ink rules
+      // faint horizontal ruled lines, scrolling with the camera so they read
+      // as a continuous sheet of paper as you climb
+      ctx.save();
+      ctx.strokeStyle=C.ruleBlue; ctx.lineWidth=1; ctx.globalAlpha=0.5;
+      const STEP=26, off=((camY%STEP)+STEP)%STEP;
+      ctx.beginPath();
+      for(let y=-off; y<=H; y+=STEP){ ctx.moveTo(field.x, y+0.5); ctx.lineTo(field.x+field.w, y+0.5); }
+      ctx.stroke();
+      // pink margin rule a little in from the left, like a school exercise book
+      ctx.strokeStyle=C.ruleMargin; ctx.globalAlpha=0.7;
+      const mx=field.x+Math.min(34, field.w*0.10)+0.5;
+      ctx.beginPath(); ctx.moveTo(mx,0); ctx.lineTo(mx,H); ctx.stroke();
+      ctx.restore();
+      // field side guides — thin matte ink rules (page edges)
       ctx.save(); ctx.globalAlpha=0.55; ctx.strokeStyle=C.line; ctx.lineWidth=1;
       ctx.beginPath(); ctx.moveTo(field.x+0.5,0); ctx.lineTo(field.x+0.5,H);
       ctx.moveTo(field.x+field.w-0.5,0); ctx.lineTo(field.x+field.w-0.5,H); ctx.stroke();
@@ -291,26 +320,48 @@
     function drawPlatform(p){
       const y=p.y-camY; if(y<-30||y>H+30) return;
       ctx.save(); ctx.globalAlpha=p.vis;
-      const col=platColor(p.spring?'normal':p.type);
-      // body — matte fill with a thin ink keyline
-      ctx.fillStyle=col; ctx.strokeStyle=C.ink; ctx.lineWidth=1.5;
-      roundRect(p.x,y,p.w,PH,4); ctx.fill(); ctx.stroke();
-      // top edge — soft cream band (flat, not glossy)
-      ctx.fillStyle='rgba(239,230,210,.28)';
-      roundRect(p.x+2,y+2,p.w-4,3,2); ctx.fill();
-      // grain notch
-      ctx.fillStyle='rgba(34,31,23,.22)';
-      ctx.fillRect(p.x+p.w*0.5-1, y+5, 2, PH-7);
-      // spring decoration — oxblood accent (the one bright element)
-      if(p.spring){ ctx.strokeStyle=C.oxblood; ctx.lineWidth=2.4;
-        const cx=p.x+p.w/2; ctx.beginPath();
-        ctx.moveTo(cx-6,y-2); ctx.lineTo(cx,y-9); ctx.lineTo(cx+6,y-2); ctx.stroke();
-        ctx.beginPath(); ctx.moveTo(cx-6,y-7); ctx.lineTo(cx,y-13); ctx.lineTo(cx+6,y-7); ctx.stroke();
+      const isMove=p.type==='move', isBreak=p.type==='fragile';
+      const body=platColor(p.type);
+      const top=isMove?C.moveTop:isBreak?C.breakTop:C.platTop;
+      const edge=isMove?'#2f5a8f':isBreak?'#6e4a26':C.platEdge;
+      // body — matte fill with a thin darker keyline
+      ctx.fillStyle=body; ctx.strokeStyle=edge; ctx.lineWidth=1.5;
+      roundRect(p.x,y,p.w,PH,5); ctx.fill(); ctx.stroke();
+      // top band — lighter "grass / lid" stripe (flat, not glossy)
+      ctx.fillStyle=top;
+      roundRect(p.x+2,y+2,p.w-4,PH*0.42,3); ctx.fill();
+      if(isMove){
+        // blue moving platform — small chevrons hint at the side-to-side motion
+        ctx.strokeStyle='rgba(255,255,255,.55)'; ctx.lineWidth=1.6;
+        const cx=p.x+p.w/2, dy=y+PH*0.66;
+        ctx.beginPath();
+        ctx.moveTo(cx-9,dy-3); ctx.lineTo(cx-13,dy); ctx.lineTo(cx-9,dy+3);
+        ctx.moveTo(cx+9,dy-3); ctx.lineTo(cx+13,dy); ctx.lineTo(cx+9,dy+3);
+        ctx.stroke();
+      } else if(isBreak){
+        // brown breakable platform — cracked across the middle
+        ctx.strokeStyle='rgba(34,31,23,.45)'; ctx.lineWidth=1.4;
+        ctx.beginPath();
+        ctx.moveTo(p.x+p.w*0.30,y+2); ctx.lineTo(p.x+p.w*0.44,y+PH-2);
+        ctx.moveTo(p.x+p.w*0.62,y+2); ctx.lineTo(p.x+p.w*0.54,y+PH-2);
+        ctx.moveTo(p.x+p.w*0.72,y+2); ctx.lineTo(p.x+p.w*0.80,y+PH-2);
+        ctx.stroke();
+      } else {
+        // green platform — a couple of grass tufts on the lid
+        ctx.fillStyle=C.platEdge;
+        ctx.fillRect(p.x+p.w*0.28, y+1, 2, 3);
+        ctx.fillRect(p.x+p.w*0.66, y+1, 2, 3);
       }
-      // fragile cracks
-      if(p.type==='fragile'){ ctx.strokeStyle='rgba(34,31,23,.40)'; ctx.lineWidth=1.4;
-        ctx.beginPath(); ctx.moveTo(p.x+p.w*0.3,y); ctx.lineTo(p.x+p.w*0.42,y+PH);
-        ctx.moveTo(p.x+p.w*0.66,y); ctx.lineTo(p.x+p.w*0.58,y+PH); ctx.stroke(); }
+      // spring decoration — a small coil + plate sitting on the platform
+      if(p.spring){ const cx=p.x+p.w/2;
+        ctx.strokeStyle=C.ink; ctx.lineWidth=2; ctx.fillStyle=C.ochre;
+        // coil
+        ctx.beginPath();
+        ctx.moveTo(cx-5,y-2); ctx.lineTo(cx+5,y-5); ctx.lineTo(cx-5,y-8); ctx.lineTo(cx+5,y-11);
+        ctx.stroke();
+        // top plate
+        roundRect(cx-7,y-15,14,4,2); ctx.fill(); ctx.stroke();
+      }
       ctx.restore();
     }
 
@@ -325,21 +376,28 @@
       ctx.scale(sx*player.face, sy);
       const r=player.r;
       // soft contact shadow (subtle, matte)
-      ctx.fillStyle='rgba(34,31,23,.18)'; ctx.beginPath(); ctx.ellipse(0,r*0.9,r*0.8,r*0.35,0,0,7); ctx.fill();
-      // body — flat oxblood, the single accent, with an ink keyline
-      ctx.fillStyle=C.oxblood; ctx.strokeStyle=C.ink; ctx.lineWidth=2;
-      ctx.beginPath(); ctx.arc(0,0,r,0,7); ctx.fill(); ctx.stroke();
-      // little wings/ears — ochre, flat
-      ctx.fillStyle=C.ochre;
-      ctx.beginPath(); ctx.ellipse(-r*0.9,-r*0.2,r*0.4,r*0.7,-0.5,0,7); ctx.fill();
-      ctx.beginPath(); ctx.ellipse(r*0.9,-r*0.2,r*0.4,r*0.7,0.5,0,7); ctx.fill();
-      // eyes — cream with ink pupils
+      ctx.fillStyle='rgba(34,31,23,.18)'; ctx.beginPath(); ctx.ellipse(0,r*0.95,r*0.8,r*0.32,0,0,7); ctx.fill();
+      ctx.strokeStyle=C.ink;
+      // little legs — green, drawn behind the body
+      ctx.fillStyle=C.heroDk;
+      roundRect(-r*0.55,r*0.55,r*0.32,r*0.7,3); ctx.fill();
+      roundRect( r*0.23,r*0.55,r*0.32,r*0.7,3); ctx.fill();
+      // body — flat green creature with an ink keyline (our own simple shape)
+      ctx.fillStyle=C.hero; ctx.lineWidth=2;
+      ctx.beginPath(); ctx.ellipse(0,0,r,r*1.04,0,0,7); ctx.fill(); ctx.stroke();
+      // a pointed snout/nose poking out the front (the genre's recognisable look)
+      ctx.fillStyle=C.hero;
+      ctx.beginPath();
+      ctx.moveTo(r*0.55,-r*0.30); ctx.lineTo(r*1.25,-r*0.10);
+      ctx.lineTo(r*0.55, r*0.18); ctx.closePath();
+      ctx.fill(); ctx.stroke();
+      // two big eyes — cream with ink pupils, set high on the head
       ctx.fillStyle='#f3ece0';
-      ctx.beginPath(); ctx.arc(r*0.18,-r*0.15,r*0.30,0,7); ctx.fill();
-      ctx.beginPath(); ctx.arc(r*0.52,-r*0.15,r*0.26,0,7); ctx.fill();
+      ctx.beginPath(); ctx.arc(r*0.10,-r*0.42,r*0.30,0,7); ctx.fill(); ctx.stroke();
+      ctx.beginPath(); ctx.arc(r*0.52,-r*0.42,r*0.27,0,7); ctx.fill(); ctx.stroke();
       ctx.fillStyle=C.ink;
-      ctx.beginPath(); ctx.arc(r*0.26,-r*0.15,r*0.13,0,7); ctx.fill();
-      ctx.beginPath(); ctx.arc(r*0.56,-r*0.15,r*0.11,0,7); ctx.fill();
+      ctx.beginPath(); ctx.arc(r*0.18,-r*0.42,r*0.12,0,7); ctx.fill();
+      ctx.beginPath(); ctx.arc(r*0.58,-r*0.42,r*0.11,0,7); ctx.fill();
       ctx.restore();
     }
 

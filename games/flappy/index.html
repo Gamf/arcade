@@ -85,13 +85,26 @@
 
     // ---- GAMF Quarterly palette (warm 1970s print catalogue) ----
     // cream page, oxblood is the ONE accent, supporting earth tones, matte ink — no glow.
-    const PAPER='#efe6d2',   // page / sky (the desk)
+    const PAPER='#efe6d2',   // page / cream (used for chrome + highlights)
           SHEET='#e6dcc4',   // slightly deeper cream band
           OXBLOOD='#9b3a22', // THE accent
           OCHRE='#c8923a', OLIVE='#6f6a3b', CLAY='#a4623a',
           BROWN='#4a3b2a', INK='#221f17', BONE='#f3ece0';
     // legacy aliases so existing draw code keeps reading cleanly
     const BG=PAPER, SCREEN=SHEET, RED=OXBLOOD, AMBER=OCHRE, LINE=BROWN;
+
+    // ---- Flappy Bird signature colours (the recognisable gameplay identity) ----
+    // matte, flat versions of the classic so it reads at a glance — no neon, no glow.
+    const SKY='#8fc6d6',       // soft daytime blue sky (matte, not saturated)
+          SKY_LOW='#a7d3dd',   // gentle lighter band near the horizon
+          PIPE_GREEN='#73a64a',// the iconic green pipe body (muted, flat)
+          PIPE_DARK='#4e7d34', // shaded inner edge of the pipe
+          PIPE_LIGHT='#9cc46e',// pipe highlight stripe
+          BIRD_YEL='#e8c14a',  // the round yellow bird
+          BIRD_WING='#f3e2a8', // pale wing/belly
+          BIRD_BEAK='#e07a2a', // orange beak
+          GRD_SAND='#d9c27a',  // sandy ground band
+          GRD_GRASS='#7fae4e'; // green strip atop the ground
 
     let W,H,dpr;
     function resize(){ dpr=Math.min(devicePixelRatio||1,2); W=innerWidth; H=innerHeight;
@@ -203,7 +216,7 @@
       if(mode==='dead') return;
       mode='dead';
       flashT=1; shakeT=1;
-      burst(birdX(), bird.y, 22, [OCHRE,OXBLOOD,CLAY]);
+      burst(birdX(), bird.y, 22, [BIRD_YEL,BIRD_BEAK,OXBLOOD]);
       loseFeathers(birdX(), bird.y);
       const isNew=score>best;
       if(isNew){ best=score; localStorage.setItem(BEST_KEY,best);
@@ -346,7 +359,7 @@
         p.x-=SPEED;
         // scoring: count when bird's x passes the pipe center
         if(!p.passed && p.x+PIPE_W/2 < bx){ p.passed=true; score++; updateHud();
-          burst(bx, p.gy, 6, [OCHRE,CLAY]); }
+          burst(bx, p.gy, 6, [PIPE_LIGHT,BONE]); }
       }
       // recycle: drop off-screen pipes, append new ones to keep the field full
       if(pipes.length && pipes[0].x < -PIPE_W){ pipes.shift();
@@ -378,29 +391,50 @@
     }
 
     function drawBackground(){
-      // flat cream sky — clean printed stock, no glow, no gradient haze
-      ctx.fillStyle=PAPER; ctx.fillRect(0,0,W,H);
+      // flat soft-blue daytime sky — the recognisable Flappy backdrop, done matte
+      ctx.fillStyle=SKY; ctx.fillRect(0,0,W,H);
+      // gentle lighter band low in the sky (a calm horizon, no gradient)
+      ctx.fillStyle=SKY_LOW; ctx.fillRect(0,H*0.55,W,H*0.45);
 
-      // flat matte ochre "sun" disc, printed like a catalogue spot colour
-      const sunX=W*0.74, sunY=H*0.22, sunR=Math.min(W,H)*0.10;
+      // flat matte ochre "sun" disc, like a printed spot colour
+      const sunX=W*0.74, sunY=H*0.20, sunR=Math.min(W,H)*0.09;
       ctx.fillStyle=OCHRE; ctx.beginPath(); ctx.arc(sunX,sunY,sunR,0,TAU); ctx.fill();
 
-      // parallax dune silhouettes (deterministic, scroll with world) — flat earth tones
-      drawDunes(0.18, '#cdbf9a', H*0.62, 70);   // pale olive-sand far band
-      drawDunes(0.35, OLIVE,     H*0.70, 46);   // olive near band
+      // drifting flat clouds (deterministic puffs, cream) — calm, no detail noise
+      drawClouds(0.10, BONE, H*0.20, 0.85);
+      drawClouds(0.18, PAPER, H*0.34, 1.0);
+
+      // distant green bushes along the skyline (the classic's scenery) — flat olive band
+      drawBushes(0.30, '#6f9a4a', H*0.62, 34);
     }
 
-    function drawDunes(par, color, baseY, amp){
-      const off=(t*SPEED*par)% (W);
+    function drawClouds(par, color, baseY, sc){
+      const span=W+260*S, off=(t*SPEED*par)%span;
+      ctx.fillStyle=color;
+      for(let i=-1;i<=3;i++){
+        const cx=i*(span/3) - off + (i%2?80*S:0);
+        const cy=baseY + Math.sin(i*1.3)*20*S;
+        const r=42*S*sc;
+        ctx.beginPath();
+        ctx.arc(cx,        cy,        r,       0,TAU);
+        ctx.arc(cx+r*0.9,  cy+r*0.18, r*0.78,  0,TAU);
+        ctx.arc(cx-r*0.9,  cy+r*0.22, r*0.7,   0,TAU);
+        ctx.arc(cx+r*0.1,  cy+r*0.30, r*0.95,  0,TAU);
+        ctx.fill();
+      }
+    }
+
+    function drawBushes(par, color, baseY, amp){
+      const off=(t*SPEED*par)%(W);
       ctx.fillStyle=color;
       ctx.beginPath();
       ctx.moveTo(0,H);
-      const step=W/8;
-      for(let i=-1;i<=9;i++){
+      const step=W/9;
+      for(let i=-1;i<=10;i++){
         const x=i*step - (off%step);
-        const y=baseY + Math.sin((i*1.7) + t*0.003*par*10)*amp*S*0.4
-                + Math.sin(i*0.6)*amp*S*0.5;
-        ctx.lineTo(x,y);
+        const y=baseY + Math.abs(Math.sin(i*1.1))*amp*S - amp*S*0.4;
+        ctx.lineTo(x, y);
+        ctx.lineTo(x+step*0.5, baseY + amp*S*0.5);
       }
       ctx.lineTo(W,H); ctx.closePath(); ctx.fill();
     }
@@ -410,27 +444,34 @@
       const capH=Math.max(16, 18*S), capOver=Math.max(6,7*S);
       const x=p.x, w=PIPE_W;
 
+      const edge=Math.max(2,3*S);
       function body(y,h){
         if(h<=0) return;
-        // flat matte olive pipe, like a block of printed ink
-        ctx.fillStyle=OLIVE;
+        // flat matte GREEN pipe — the single most recognisable Flappy element
+        ctx.fillStyle=PIPE_GREEN;
         ctx.fillRect(x,y,w,h);
-        // thin ochre inner stripe for a bit of structure (no gradient, no glow)
-        ctx.fillStyle=OCHRE;
-        ctx.fillRect(x+w*0.16, y, Math.max(2,3*S), h);
-        // dark ink edge
+        // bright highlight stripe down the left (flat, no gradient)
+        ctx.fillStyle=PIPE_LIGHT;
+        ctx.fillRect(x+w*0.14, y, Math.max(3,5*S), h);
+        // darker shaded band down the right
+        ctx.fillStyle=PIPE_DARK;
+        ctx.fillRect(x+w*0.72, y, w*0.28-edge, h);
+        // dark ink outer edges
         ctx.fillStyle=INK;
-        ctx.fillRect(x+w-Math.max(2,3*S), y, Math.max(2,3*S), h);
+        ctx.fillRect(x, y, edge, h);
+        ctx.fillRect(x+w-edge, y, edge, h);
       }
       // top pipe (body from 0..topH) and its cap
       body(0, topH);
       body(botY, groundY()-botY);
 
-      // caps (flat clay blocks with a hard ink underline — no gradient, no rim glow)
+      // caps (flat green lip blocks with a hard ink underline — no gradient, no glow)
       function cap(cy){
         const cx=x-capOver, cw=w+capOver*2;
-        ctx.fillStyle=CLAY; roundRect(cx,cy,cw,capH,Math.max(2,3*S)); ctx.fill();
-        ctx.fillStyle=INK; ctx.fillRect(cx, cy+capH-Math.max(2,3*S), cw, Math.max(2,3*S));
+        ctx.fillStyle=PIPE_GREEN; roundRect(cx,cy,cw,capH,Math.max(2,3*S)); ctx.fill();
+        ctx.fillStyle=PIPE_LIGHT; ctx.fillRect(cx+edge, cy+edge, cw*0.22, capH-edge*2);
+        ctx.fillStyle=PIPE_DARK;  ctx.fillRect(cx+cw*0.72, cy+edge, cw*0.28-edge, capH-edge*2);
+        ctx.lineWidth=edge; ctx.strokeStyle=INK; roundRect(cx,cy,cw,capH,Math.max(2,3*S)); ctx.stroke();
       }
       cap(topH-capH);   // bottom of the top pipe
       cap(botY);        // top of the bottom pipe
@@ -438,17 +479,26 @@
 
     function drawGround(){
       const gyv=groundY();
-      // flat warm-brown ground slab
-      ctx.fillStyle=BROWN; ctx.fillRect(0,gyv,W,GROUND);
-      // thin ochre rule along the top — a printed catalogue divider line
-      ctx.fillStyle=OCHRE; ctx.fillRect(0,gyv,W,Math.max(2,3*S));
-      // scrolling diagonal hash texture (deterministic), matte ink lines
+      const grassH=Math.max(10,14*S);
+      // flat sandy ground slab — the classic's warm base
+      ctx.fillStyle=GRD_SAND; ctx.fillRect(0,gyv+grassH,W,GROUND-grassH);
+      // green grass strip running along the top edge
+      ctx.fillStyle=GRD_GRASS; ctx.fillRect(0,gyv,W,grassH);
+      // scrolling notch pattern on the grass lip (deterministic) — the toothed border
+      ctx.fillStyle=PIPE_DARK;
+      const sp=26*S, off=(t*SPEED)%(sp*2);
+      for(let x=-sp*2-off; x<W+sp; x+=sp*2){
+        ctx.fillRect(x, gyv+grassH-Math.max(3,4*S), sp, Math.max(3,4*S));
+      }
+      // dark ink rule under the grass
+      ctx.fillStyle=INK; ctx.fillRect(0,gyv+grassH,W,Math.max(2,2*S));
+      // scrolling diagonal hash texture in the sand (deterministic), matte ink lines
       ctx.save();
-      ctx.beginPath(); ctx.rect(0,gyv+5*S,W,GROUND); ctx.clip();
-      ctx.strokeStyle=INK; ctx.lineWidth=Math.max(2,3*S); ctx.globalAlpha=0.5;
-      const sp=26*S, off=(t*SPEED)%(sp);
-      for(let x=-GROUND-off; x<W+sp; x+=sp){
-        ctx.beginPath(); ctx.moveTo(x,gyv+GROUND); ctx.lineTo(x+GROUND,gyv+5*S); ctx.stroke();
+      ctx.beginPath(); ctx.rect(0,gyv+grassH,W,GROUND-grassH); ctx.clip();
+      ctx.strokeStyle=BROWN; ctx.lineWidth=Math.max(2,3*S); ctx.globalAlpha=0.35;
+      const sp2=30*S, off2=(t*SPEED)%(sp2);
+      for(let x=-GROUND-off2; x<W+sp2; x+=sp2){
+        ctx.beginPath(); ctx.moveTo(x,gyv+GROUND); ctx.lineTo(x+GROUND,gyv+grassH); ctx.stroke();
       }
       ctx.restore();
     }
@@ -459,34 +509,38 @@
       ctx.translate(bx,bird.y); ctx.rotate(bird.a);
       const r=BIRD_R;
       // hard offset shadow (matte, no blur) — warm brown ink
-      ctx.fillStyle='rgba(34,31,23,0.30)';
+      ctx.fillStyle='rgba(34,31,23,0.28)';
       ctx.beginPath(); ctx.ellipse(3*S,4*S,r,r*0.92,0,0,TAU); ctx.fill();
-      // body — flat oxblood: the bird is THE accent element
-      ctx.fillStyle=OXBLOOD;
+      // body — flat round YELLOW: the recognisable Flappy hero
+      ctx.fillStyle=BIRD_YEL;
       ctx.beginPath(); ctx.ellipse(0,0,r,r*0.92,0,0,TAU); ctx.fill();
       ctx.lineWidth=Math.max(2,2.4*S); ctx.strokeStyle=INK; ctx.stroke();
 
-      // wing (flaps on input) — flat clay against the oxblood body
+      // pale belly patch — flat cream
+      ctx.fillStyle=BIRD_WING;
+      ctx.beginPath(); ctx.ellipse(r*0.1, r*0.34, r*0.55, r*0.34, 0, 0, TAU); ctx.fill();
+
+      // wing (flaps on input) — flat pale wing against the yellow body
       const wf = bird.flapT>0 ? -0.8 : Math.sin(t/6)*0.25;
       ctx.save(); ctx.translate(-r*0.15, r*0.05); ctx.rotate(wf);
-      ctx.fillStyle=CLAY;
+      ctx.fillStyle=BIRD_WING;
       ctx.beginPath(); ctx.ellipse(-r*0.2, r*0.05, r*0.62, r*0.4, 0, 0, TAU); ctx.fill();
       ctx.lineWidth=Math.max(1.5,2*S); ctx.strokeStyle=INK; ctx.stroke();
       ctx.restore();
 
-      // belly highlight — cream, flat
-      ctx.fillStyle=BONE;
-      ctx.beginPath(); ctx.ellipse(r*0.1, r*0.35, r*0.5, r*0.32, 0, 0, TAU); ctx.fill();
-
-      // beak — ochre
-      ctx.fillStyle=OCHRE;
+      // beak — orange wedge
+      ctx.fillStyle=BIRD_BEAK;
       ctx.beginPath();
-      ctx.moveTo(r*0.78,-r*0.12); ctx.lineTo(r*1.42,0); ctx.lineTo(r*0.78,r*0.18); ctx.closePath();
+      ctx.moveTo(r*0.78,-r*0.12); ctx.lineTo(r*1.42,0.02*r); ctx.lineTo(r*0.78,r*0.20); ctx.closePath();
       ctx.fill(); ctx.lineWidth=Math.max(1.2,1.6*S); ctx.strokeStyle=INK; ctx.stroke();
+      // small lower-beak shading line for the open-beak look
+      ctx.strokeStyle=INK; ctx.lineWidth=Math.max(1,1.4*S);
+      ctx.beginPath(); ctx.moveTo(r*0.82,r*0.06); ctx.lineTo(r*1.30,r*0.06); ctx.stroke();
 
-      // eye
-      ctx.fillStyle=BONE; ctx.beginPath(); ctx.arc(r*0.42,-r*0.3,r*0.3,0,TAU); ctx.fill();
-      ctx.fillStyle=INK; ctx.beginPath(); ctx.arc(r*0.50,-r*0.3,r*0.14,0,TAU); ctx.fill();
+      // eye — big white with ink pupil (the classic googly eye)
+      ctx.fillStyle=BONE; ctx.beginPath(); ctx.arc(r*0.42,-r*0.32,r*0.34,0,TAU); ctx.fill();
+      ctx.lineWidth=Math.max(1.4,1.8*S); ctx.strokeStyle=INK; ctx.stroke();
+      ctx.fillStyle=INK; ctx.beginPath(); ctx.arc(r*0.52,-r*0.32,r*0.15,0,TAU); ctx.fill();
       ctx.restore();
     }
 
@@ -496,7 +550,7 @@
         ctx.arc(p.x,p.y,p.r*Math.max(0.3,p.life),0,TAU); ctx.fill(); }
       ctx.globalAlpha=1;
       for(const f of feathers){ ctx.save(); ctx.globalAlpha=Math.max(0,f.life);
-        ctx.translate(f.x,f.y); ctx.rotate(f.rot); ctx.fillStyle=AMBER;
+        ctx.translate(f.x,f.y); ctx.rotate(f.rot); ctx.fillStyle=BIRD_YEL;
         ctx.beginPath(); ctx.ellipse(0,0,f.s,f.s*0.4,0,0,TAU); ctx.fill();
         ctx.strokeStyle=INK; ctx.lineWidth=1*S; ctx.stroke(); ctx.restore(); }
       ctx.globalAlpha=1;
@@ -523,10 +577,10 @@
       ctx.font=`${Math.round(52*S)}px 'Anton', system-ui, sans-serif`;
       ctx.fillStyle=OCHRE;   ctx.fillText('FLAPPY', W/2+3*S, H*0.24+3*S);
       ctx.fillStyle=OXBLOOD; ctx.fillText('FLAPPY', W/2, H*0.24);
-      // blinking prompt — warm brown ink
+      // blinking prompt — dark ink reads clearly on the blue sky
       if(Math.floor(t/26)%2===0){
         ctx.font=`700 ${Math.round(15*S)}px 'Space Mono', monospace`;
-        ctx.fillStyle=BROWN;
+        ctx.fillStyle=INK;
         ctx.fillText('FLAP BUTTON  ·  SPACE  ·  ↑', W/2, H*0.62);
       }
       ctx.restore();

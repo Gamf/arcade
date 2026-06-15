@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
-  <meta name="theme-color" content="#2a2118">
+  <meta name="theme-color" content="#161b22">
   <title>Missile Command — Gamf</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -83,14 +83,19 @@
 
     // ---- warm 1970s catalogue palette (flat matte ink, no neon, no glow) ----
     // dusk sky (this sky-defence game reads better dark) + warm earth tones
-    const BG='#2a2118';                 // warm dusk sky base
-    const SKY_TOP='#3a2c1f';            // slightly lighter warm dusk at top
-    const RED='#9b3a22';                // oxblood — the single accent (enemy threat)
-    const AMBER='#c8923a';              // ochre — interceptors / friendly highlights
-    const BONE='#efe6d2';              // cream — turret / structures
-    const BONE_DIM='#a4623a';          // clay — dim sky speckle
+    // Missile Command identity: dark night sky, green terrain horizon, cities
+    // along the ground, white/cyan interceptor trails arcing up to a crosshair,
+    // red descending enemy trails, colourful blast clouds. Kept matte + calm.
+    const BG='#161b22';                 // deep night sky base (the classic black-blue)
+    const SKY_TOP='#1d2630';            // faintly lighter night blue at top
+    const RED='#c0392b';                // enemy missile trail / threat accent
+    const AMBER='#e0a93c';              // ochre — friendly highlights / blast core
+    const CYAN='#7fd0d6';               // interceptor trail / crosshair (iconic cool tone)
+    const BONE='#efe6d2';              // cream — city structures
+    const BONE_DIM='#5a6b54';          // dim greenish sky speckle
     const OLIVE='#6f6a3b';             // olive — supporting earth tone
-    const GROUND='#4a3b2a', LINE='#221f17';  // warm brown ground, ink line
+    const TERRAIN='#3a7d3a';           // green ground terrain (Missile Command signature)
+    const GROUND='#2f5a2e', LINE='#1d3a1c';  // green ground, dark green ink line
     const TAU=Math.PI*2;
 
     let W,H,dpr;
@@ -422,21 +427,31 @@
 
     function drawBattery(){
       const x=battery.x, y=battery.y, r=battery.r;
-      // bunker (supporting clay tone — accent reserved for the enemy threat)
-      ctx.fillStyle=OLIVE;
+      // missile base: a green trapezoid bunker (the iconic Missile Command base)
+      ctx.fillStyle=TERRAIN;
       ctx.beginPath();
       ctx.moveTo(x-r, y);
-      ctx.lineTo(x-r*0.5, y-r*0.75);
-      ctx.lineTo(x+r*0.5, y-r*0.75);
+      ctx.lineTo(x-r*0.55, y-r*0.85);
+      ctx.lineTo(x+r*0.55, y-r*0.85);
       ctx.lineTo(x+r, y);
       ctx.closePath(); ctx.fill();
+      // stacked ammo pyramid on top (the base's missile stockpile silhouette)
+      ctx.fillStyle=AMBER;
+      const ax=x, ay=y-r*0.85;
+      for(let row=0; row<3; row++){
+        const n=3-row;                       // 3,2,1 — pyramid
+        for(let i=0;i<n;i++){
+          const px=ax-(n-1)*4 + i*8;
+          ctx.beginPath(); ctx.arc(px, ay-2-row*6, 2.4, 0, TAU); ctx.fill();
+        }
+      }
       // turret barrel along the aim angle
       ctx.strokeStyle=BONE; ctx.lineWidth=4; ctx.lineCap='round';
       ctx.beginPath();
       ctx.moveTo(x, y-r*0.6);
       ctx.lineTo(x+Math.cos(aimAngle)*r*1.05, (y-r*0.6)+Math.sin(aimAngle)*r*1.05);
       ctx.stroke();
-      ctx.fillStyle=AMBER; ctx.beginPath(); ctx.arc(x,y-r*0.6,3.6,0,TAU); ctx.fill();
+      ctx.fillStyle=CYAN; ctx.beginPath(); ctx.arc(x,y-r*0.6,3.6,0,TAU); ctx.fill();
     }
 
     function render(){
@@ -462,9 +477,10 @@
         ctx.fillRect(px,py,1.4,1.4); }
       ctx.globalAlpha=1;
 
-      // ground
+      // ground terrain (green band — Missile Command's signature horizon)
       ctx.fillStyle=GROUND; ctx.fillRect(-24,groundY,W+48,H-groundY+48);
-      ctx.fillStyle=LINE; ctx.fillRect(-24,groundY,W+48,2);
+      ctx.fillStyle=TERRAIN; ctx.fillRect(-24,groundY,W+48,4);
+      ctx.fillStyle=LINE; ctx.fillRect(-24,groundY+4,W+48,2);
 
       // enemy missile trails (oxblood — the single threat accent, flat ink)
       for(const en of enemies){
@@ -473,15 +489,17 @@
         ctx.fillStyle=RED; ctx.beginPath(); ctx.arc(en.x,en.y,en.r,0,TAU); ctx.fill();
       }
 
-      // interceptor trails (cream line, ochre head — flat)
+      // interceptor trails (cyan line, white head — the iconic Missile Command arc)
       for(const m of interceptors){
-        ctx.strokeStyle=BONE_DIM; ctx.lineWidth=1.4;
+        ctx.strokeStyle=CYAN; ctx.lineWidth=1.6;
         ctx.beginPath(); ctx.moveTo(battery.x,battery.y-battery.r); ctx.lineTo(m.x,m.y); ctx.stroke();
-        ctx.fillStyle=AMBER; ctx.beginPath(); ctx.arc(m.x,m.y,2.4,0,TAU); ctx.fill();
-        // target reticle (matte cream cross, no glow)
-        ctx.strokeStyle='rgba(239,230,210,0.4)'; ctx.lineWidth=1;
-        ctx.beginPath(); ctx.moveTo(m.tx-5,m.ty); ctx.lineTo(m.tx+5,m.ty);
-        ctx.moveTo(m.tx,m.ty-5); ctx.lineTo(m.tx,m.ty+5); ctx.stroke();
+        ctx.fillStyle=BONE; ctx.beginPath(); ctx.arc(m.x,m.y,2.4,0,TAU); ctx.fill();
+        // target crosshair reticle (cyan X+cross — the signature cursor mark)
+        ctx.strokeStyle='rgba(127,208,214,0.65)'; ctx.lineWidth=1.2;
+        ctx.beginPath();
+        ctx.moveTo(m.tx-6,m.ty-6); ctx.lineTo(m.tx+6,m.ty+6);
+        ctx.moveTo(m.tx+6,m.ty-6); ctx.lineTo(m.tx-6,m.ty+6);
+        ctx.stroke();
       }
 
       // blasts (flat matte ink disc — solid ochre with clay rim, no radial glow)
@@ -510,8 +528,8 @@
       cities.forEach(drawCity);
       drawBattery();
 
-      // keyboard aim guide line when not firing-by-tap
-      ctx.strokeStyle='rgba(239,230,210,0.18)'; ctx.lineWidth=1; ctx.setLineDash([4,6]);
+      // keyboard aim guide line when not firing-by-tap (faint cyan, the cursor track)
+      ctx.strokeStyle='rgba(127,208,214,0.20)'; ctx.lineWidth=1; ctx.setLineDash([4,6]);
       ctx.beginPath(); ctx.moveTo(battery.x,battery.y-battery.r);
       const reach=Math.min(H*0.82,900);
       ctx.lineTo(battery.x+Math.cos(aimAngle)*reach,(battery.y-battery.r)+Math.sin(aimAngle)*reach);
