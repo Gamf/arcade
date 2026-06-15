@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
-  <meta name="theme-color" content="#07080c">
+  <meta name="theme-color" content="#2a2118">
   <title>Invaders — Gamf</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -15,11 +15,11 @@
       -webkit-user-select:none;user-select:none}
     .wrap{height:100%;display:flex;align-items:center;justify-content:center;
       padding:env(safe-area-inset-top) 10px env(safe-area-inset-bottom)}
-    canvas{background:#090b13;border-radius:14px;touch-action:none;
-      box-shadow:0 10px 40px rgba(0,0,0,.5),0 0 0 1px rgba(80,224,194,.14)}
+    canvas{background:#2a2118;border-radius:14px;touch-action:none;
+      box-shadow:0 10px 40px rgba(34,31,23,.35),0 0 0 1px rgba(74,59,42,.5)}
   </style>
 </head>
-<body class="gx" style="--gx-accent:#36e0c2">
+<body class="gx" style="--gx-accent:#9b3a22">
   <script src="../../gamf-icons.js"></script>
   <div class="gx-hud">
     <a class="gx-hud__back" href="../../"><svg class="gx-ico"><use href="#i-back"/></svg> Arcade</a>
@@ -250,16 +250,16 @@
       for(let i=bullets.length-1;i>=0;i--){
         const b=bullets[i]; let gone=false;
         if(b.y<-10){ bullets.splice(i,1); continue; }
-        if(hitBarrier(b.x,b.y)){ burst(b.x,b.y,'#8aa0c8',5); bullets.splice(i,1); continue; }
+        if(hitBarrier(b.x,b.y)){ burst(b.x,b.y,'#6f6a3b',5); bullets.splice(i,1); continue; }
         if(ufo && hitRect(b.x,b.y,ufo)){
-          setScore(score+ufo.score); burst(ufo.x,ufo.y,'#ffb454',18); ufo=null; ufoTimer=10+rnd()*7;
+          setScore(score+ufo.score); burst(ufo.x,ufo.y,'#c8923a',18); ufo=null; ufoTimer=10+rnd()*7;
           bullets.splice(i,1); continue;
         }
         for(const a of liveAliens){
           if(a.alive && hitRect(b.x,b.y,a)){
             a.alive=false; gone=true;
             setScore(score + (a.type===2?40:a.type===1?20:10));
-            burst(a.x,a.y, a.type===2?'#ff5d6c':a.type===1?'#7c5cff':'#36e0c2',14);
+            burst(a.x,a.y, a.type===2?'#9b3a22':a.type===1?'#a4623a':'#c8923a',14);
             break;
           }
         }
@@ -271,12 +271,12 @@
       for(let i=bombs.length-1;i>=0;i--){
         const b=bombs[i];
         if(b.y>H+10){ bombs.splice(i,1); continue; }
-        if(hitBarrier(b.x,b.y)){ burst(b.x,b.y,'#8aa0c8',5); bombs.splice(i,1); continue; }
+        if(hitBarrier(b.x,b.y)){ burst(b.x,b.y,'#6f6a3b',5); bombs.splice(i,1); continue; }
         // collide with a player bullet
         let canceled=false;
         for(let j=bullets.length-1;j>=0;j--){
           if(Math.abs(bullets[j].x-b.x)<6 && Math.abs(bullets[j].y-b.y)<10){
-            burst(b.x,b.y,'#ffffff',6); bullets.splice(j,1); canceled=true; break;
+            burst(b.x,b.y,'#efe6d2',6); bullets.splice(j,1); canceled=true; break;
           }
         }
         if(canceled){ bombs.splice(i,1); continue; }
@@ -291,14 +291,14 @@
 
     function hitPlayer(){
       lives--;
-      burst(player.x,player.y,'#ff5d6c',24);
+      burst(player.x,player.y,'#9b3a22',24);
       player.x=W/2;
       if(lives<=0){ die(false); }
     }
 
     function die(overrun){
       alive=false; running=false;
-      if(overrun) burst(player.x,player.y,'#ff5d6c',24);
+      if(overrun) burst(player.x,player.y,'#9b3a22',24);
       if(score>best){ best=score; localStorage.setItem(BEST_KEY,best);
         document.getElementById('best').textContent=best;
         document.getElementById('newBest').textContent='New best!'; }
@@ -311,18 +311,15 @@
     }
 
     // ---- render ----
-    let star=[];
-    (function initStars(){ for(let i=0;i<46;i++) star.push({x:rnd()*W,y:rnd()*H,r:rnd()*1.3+0.3,t:rnd()*6}); })();
-
     function drawAlien(a,t){
       ctx.save();
-      const col=a.type===2?'#ff5d6c':a.type===1?'#9b86ff':'#36e0c2';
-      ctx.fillStyle=col; ctx.shadowBlur=8; ctx.shadowColor=col;
+      const col=a.type===2?'#9b3a22':a.type===1?'#a4623a':'#c8923a';
+      ctx.fillStyle=col;
       const x=a.x, y=a.y, wob=a.anim?1:-1;
       // body
       ctx.beginPath(); ctx.roundRect(x-9,y-7,18,12,4); ctx.fill();
       // eyes
-      ctx.fillStyle='#090b13'; ctx.shadowBlur=0;
+      ctx.fillStyle='#2a2118';
       ctx.beginPath(); ctx.arc(x-4,y-1,1.6,0,7); ctx.arc(x+4,y-1,1.6,0,7); ctx.fill();
       // legs (animate)
       ctx.fillStyle=col;
@@ -332,29 +329,23 @@
 
     function draw(t){
       ctx.clearRect(0,0,W,H);
-      // backdrop
-      const g=ctx.createLinearGradient(0,0,0,H);
-      g.addColorStop(0,'#0b0f1c'); g.addColorStop(1,'#090b13');
-      ctx.fillStyle=g; ctx.fillRect(0,0,W,H);
-      // stars
-      for(const s of star){ ctx.globalAlpha=0.4+0.4*Math.sin(t/600+s.t);
-        ctx.fillStyle='#9fb4e6'; ctx.beginPath(); ctx.arc(s.x,s.y,s.r,0,7); ctx.fill(); }
-      ctx.globalAlpha=1;
+      // backdrop — clean solid warm dusk
+      ctx.fillStyle='#2a2118'; ctx.fillRect(0,0,W,H);
 
       // barriers
       for(const cells of barriers){
         for(const c of cells){
           if(c.hp<=0) continue;
-          ctx.fillStyle=c.hp>=2?'#36e0c2':'#1e7d6e';
+          ctx.fillStyle=c.hp>=2?'#6f6a3b':'#4a3b2a';
           ctx.fillRect(c.x,c.y,4,4);
         }
       }
 
       // ufo
       if(ufo){
-        ctx.save(); ctx.fillStyle='#ffb454'; ctx.shadowBlur=12; ctx.shadowColor='#ffb454';
+        ctx.save(); ctx.fillStyle='#c8923a';
         ctx.beginPath(); ctx.ellipse(ufo.x,ufo.y,13,5,0,0,7); ctx.fill();
-        ctx.fillStyle='#fff'; ctx.shadowBlur=0;
+        ctx.fillStyle='#efe6d2';
         ctx.beginPath(); ctx.ellipse(ufo.x,ufo.y-3,6,3,0,0,7); ctx.fill();
         ctx.restore();
       }
@@ -362,35 +353,33 @@
       // aliens
       for(const a of aliens) if(a.alive) drawAlien(a,t);
 
-      // player
+      // player — oxblood accent (most important element)
       if(alive){
-        ctx.save(); ctx.fillStyle='#eef1f7'; ctx.shadowBlur=10; ctx.shadowColor='#36e0c2';
+        ctx.save(); ctx.fillStyle='#9b3a22';
         const px=player.x, py=player.y;
         ctx.beginPath();
         ctx.moveTo(px,py-9); ctx.lineTo(px+14,py+6); ctx.lineTo(px+9,py+6);
         ctx.lineTo(px+9,py+2); ctx.lineTo(px-9,py+2); ctx.lineTo(px-9,py+6);
         ctx.lineTo(px-14,py+6); ctx.closePath(); ctx.fill();
-        ctx.fillStyle='#36e0c2'; ctx.fillRect(px-2,py-7,4,5);
+        ctx.fillStyle='#efe6d2'; ctx.fillRect(px-2,py-7,4,5);
         ctx.restore();
       }
 
       // bullets
-      ctx.fillStyle='#eef1f7'; ctx.shadowBlur=8; ctx.shadowColor='#36e0c2';
+      ctx.fillStyle='#efe6d2';
       for(const b of bullets){ ctx.fillRect(b.x-1.5,b.y-7,3,10); }
-      ctx.fillStyle='#ff8a6c'; ctx.shadowColor='#ff5d6c';
+      ctx.fillStyle='#c8923a';
       for(const b of bombs){ ctx.fillRect(b.x-1.5,b.y-5,3,9); }
-      ctx.shadowBlur=0;
 
       // particles
       for(const p of particles){ ctx.globalAlpha=Math.max(0,p.life); ctx.fillStyle=p.color;
-        ctx.shadowBlur=6; ctx.shadowColor=p.color;
         ctx.beginPath(); ctx.arc(p.x,p.y,2.2*p.life+0.5,0,7); ctx.fill(); }
-      ctx.globalAlpha=1; ctx.shadowBlur=0;
+      ctx.globalAlpha=1;
 
       // lives indicators
       for(let i=0;i<lives;i++){
         const lx=14+i*18, ly=H-12;
-        ctx.fillStyle='#36e0c2';
+        ctx.fillStyle='#9b3a22';
         ctx.beginPath(); ctx.moveTo(lx,ly-6); ctx.lineTo(lx+6,ly+3); ctx.lineTo(lx-6,ly+3);
         ctx.closePath(); ctx.fill();
       }

@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
-  <meta name="theme-color" content="#15110e">
+  <meta name="theme-color" content="#efe6d2">
   <title>Flappy — Gamf</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -21,7 +21,7 @@
     /* tap target hint pulse shown on the attract screen lives on the canvas */
   </style>
 </head>
-<body class="gx" style="--gx-accent:#ff7a6c">
+<body class="gx" style="--gx-accent:#9b3a22">
   <script src="../../gamf-icons.js"></script>
 
   <canvas id="c"></canvas>
@@ -82,9 +82,15 @@
     const SLUG='flappy', BEST_KEY='gamf-arcade-'+SLUG+'-best';
     const canvas=document.getElementById('c'), ctx=canvas.getContext('2d');
 
-    // ---- arcade palette ----
-    const BG='#15110e', SCREEN='#100c09', RED='#d8412b', AMBER='#e8a23a',
-          BONE='#f4ede1', LINE='#36281d', INK='#0a0806';
+    // ---- GAMF Quarterly palette (warm 1970s print catalogue) ----
+    // cream page, oxblood is the ONE accent, supporting earth tones, matte ink — no glow.
+    const PAPER='#efe6d2',   // page / sky (the desk)
+          SHEET='#e6dcc4',   // slightly deeper cream band
+          OXBLOOD='#9b3a22', // THE accent
+          OCHRE='#c8923a', OLIVE='#6f6a3b', CLAY='#a4623a',
+          BROWN='#4a3b2a', INK='#221f17', BONE='#f3ece0';
+    // legacy aliases so existing draw code keeps reading cleanly
+    const BG=PAPER, SCREEN=SHEET, RED=OXBLOOD, AMBER=OCHRE, LINE=BROWN;
 
     let W,H,dpr;
     function resize(){ dpr=Math.min(devicePixelRatio||1,2); W=innerWidth; H=innerHeight;
@@ -196,7 +202,7 @@
       if(mode==='dead') return;
       mode='dead';
       flashT=1; shakeT=1;
-      burst(birdX(), bird.y, 22, [AMBER,RED,'#ffd27a']);
+      burst(birdX(), bird.y, 22, [OCHRE,OXBLOOD,CLAY]);
       loseFeathers(birdX(), bird.y);
       const isNew=score>best;
       if(isNew){ best=score; localStorage.setItem(BEST_KEY,best);
@@ -321,7 +327,7 @@
         p.x-=SPEED;
         // scoring: count when bird's x passes the pipe center
         if(!p.passed && p.x+PIPE_W/2 < bx){ p.passed=true; score++; updateHud();
-          burst(bx, p.gy, 6, [AMBER,'#ffd27a']); }
+          burst(bx, p.gy, 6, [OCHRE,CLAY]); }
       }
       // recycle: drop off-screen pipes, append new ones to keep the field full
       if(pipes.length && pipes[0].x < -PIPE_W){ pipes.shift();
@@ -353,20 +359,16 @@
     }
 
     function drawBackground(){
-      // warm near-black sky with a soft top glow
-      const g=ctx.createLinearGradient(0,0,0,H);
-      g.addColorStop(0,'#1c1510'); g.addColorStop(0.55,BG); g.addColorStop(1,SCREEN);
-      ctx.fillStyle=g; ctx.fillRect(0,0,W,H);
+      // flat cream sky — clean printed stock, no glow, no gradient haze
+      ctx.fillStyle=PAPER; ctx.fillRect(0,0,W,H);
 
-      // distant amber "arcade sun" disc
-      const sunX=W*0.5, sunY=H*0.30, sunR=Math.min(W,H)*0.22;
-      const sg=ctx.createRadialGradient(sunX,sunY,0,sunX,sunY,sunR);
-      sg.addColorStop(0,'rgba(232,162,58,0.16)'); sg.addColorStop(1,'rgba(232,162,58,0)');
-      ctx.fillStyle=sg; ctx.beginPath(); ctx.arc(sunX,sunY,sunR,0,TAU); ctx.fill();
+      // flat matte ochre "sun" disc, printed like a catalogue spot colour
+      const sunX=W*0.74, sunY=H*0.22, sunR=Math.min(W,H)*0.10;
+      ctx.fillStyle=OCHRE; ctx.beginPath(); ctx.arc(sunX,sunY,sunR,0,TAU); ctx.fill();
 
-      // parallax dune silhouettes (deterministic, scroll with world)
-      drawDunes(0.18, '#241a12', H*0.62, 70);
-      drawDunes(0.35, '#1d1510', H*0.70, 46);
+      // parallax dune silhouettes (deterministic, scroll with world) — flat earth tones
+      drawDunes(0.18, '#cdbf9a', H*0.62, 70);   // pale olive-sand far band
+      drawDunes(0.35, OLIVE,     H*0.70, 46);   // olive near band
     }
 
     function drawDunes(par, color, baseY, amp){
@@ -391,31 +393,25 @@
 
       function body(y,h){
         if(h<=0) return;
-        // pipe gradient (amber-to-deep), then a red rim like the cabinet accents
-        const g=ctx.createLinearGradient(x,0,x+w,0);
-        g.addColorStop(0,'#a55b1f'); g.addColorStop(0.18,AMBER);
-        g.addColorStop(0.55,'#c47e2c'); g.addColorStop(1,'#7a4316');
-        ctx.fillStyle=g;
+        // flat matte olive pipe, like a block of printed ink
+        ctx.fillStyle=OLIVE;
         ctx.fillRect(x,y,w,h);
-        // inner highlight stripe
-        ctx.fillStyle='rgba(255,233,190,0.22)';
-        ctx.fillRect(x+w*0.16, y, w*0.10, h);
-        // dark edge
-        ctx.fillStyle='rgba(10,8,6,0.35)';
-        ctx.fillRect(x+w-Math.max(3,4*S), y, Math.max(3,4*S), h);
+        // thin ochre inner stripe for a bit of structure (no gradient, no glow)
+        ctx.fillStyle=OCHRE;
+        ctx.fillRect(x+w*0.16, y, Math.max(2,3*S), h);
+        // dark ink edge
+        ctx.fillStyle=INK;
+        ctx.fillRect(x+w-Math.max(2,3*S), y, Math.max(2,3*S), h);
       }
       // top pipe (body from 0..topH) and its cap
       body(0, topH);
       body(botY, groundY()-botY);
 
-      // caps (red-rimmed amber blocks with hard ink shadow vibe)
+      // caps (flat clay blocks with a hard ink underline — no gradient, no rim glow)
       function cap(cy){
         const cx=x-capOver, cw=w+capOver*2;
-        const g=ctx.createLinearGradient(cx,0,cx+cw,0);
-        g.addColorStop(0,'#b9641f'); g.addColorStop(0.5,AMBER); g.addColorStop(1,'#8a4c18');
-        ctx.fillStyle=g; roundRect(cx,cy,cw,capH,Math.max(2,3*S)); ctx.fill();
-        ctx.fillStyle=RED; ctx.fillRect(cx, cy, cw, Math.max(2,3*S));      // top accent line
-        ctx.fillStyle='rgba(10,8,6,0.4)'; ctx.fillRect(cx, cy+capH-Math.max(2,3*S), cw, Math.max(2,3*S));
+        ctx.fillStyle=CLAY; roundRect(cx,cy,cw,capH,Math.max(2,3*S)); ctx.fill();
+        ctx.fillStyle=INK; ctx.fillRect(cx, cy+capH-Math.max(2,3*S), cw, Math.max(2,3*S));
       }
       cap(topH-capH);   // bottom of the top pipe
       cap(botY);        // top of the bottom pipe
@@ -423,15 +419,14 @@
 
     function drawGround(){
       const gyv=groundY();
-      // ground slab
-      ctx.fillStyle='#241a12'; ctx.fillRect(0,gyv,W,GROUND);
-      // red accent strip along the top (cabinet bar)
-      ctx.fillStyle=RED; ctx.fillRect(0,gyv,W,Math.max(3,3*S));
-      ctx.fillStyle='rgba(232,162,58,0.55)'; ctx.fillRect(0,gyv+Math.max(3,3*S),W,Math.max(1,2*S));
-      // scrolling diagonal hash texture (deterministic)
+      // flat warm-brown ground slab
+      ctx.fillStyle=BROWN; ctx.fillRect(0,gyv,W,GROUND);
+      // thin ochre rule along the top — a printed catalogue divider line
+      ctx.fillStyle=OCHRE; ctx.fillRect(0,gyv,W,Math.max(2,3*S));
+      // scrolling diagonal hash texture (deterministic), matte ink lines
       ctx.save();
       ctx.beginPath(); ctx.rect(0,gyv+5*S,W,GROUND); ctx.clip();
-      ctx.strokeStyle='rgba(10,8,6,0.5)'; ctx.lineWidth=Math.max(2,3*S);
+      ctx.strokeStyle=INK; ctx.lineWidth=Math.max(2,3*S); ctx.globalAlpha=0.5;
       const sp=26*S, off=(t*SPEED)%(sp);
       for(let x=-GROUND-off; x<W+sp; x+=sp){
         ctx.beginPath(); ctx.moveTo(x,gyv+GROUND); ctx.lineTo(x+GROUND,gyv+5*S); ctx.stroke();
@@ -444,30 +439,28 @@
       ctx.save();
       ctx.translate(bx,bird.y); ctx.rotate(bird.a);
       const r=BIRD_R;
-      // hard offset shadow (matches the no-blur arcade look)
-      ctx.fillStyle='rgba(10,8,6,0.55)';
+      // hard offset shadow (matte, no blur) — warm brown ink
+      ctx.fillStyle='rgba(34,31,23,0.30)';
       ctx.beginPath(); ctx.ellipse(3*S,4*S,r,r*0.92,0,0,TAU); ctx.fill();
-      // body
-      const g=ctx.createLinearGradient(-r,-r,r,r);
-      g.addColorStop(0,'#f3c14a'); g.addColorStop(1,AMBER);
-      ctx.fillStyle=g;
+      // body — flat oxblood: the bird is THE accent element
+      ctx.fillStyle=OXBLOOD;
       ctx.beginPath(); ctx.ellipse(0,0,r,r*0.92,0,0,TAU); ctx.fill();
       ctx.lineWidth=Math.max(2,2.4*S); ctx.strokeStyle=INK; ctx.stroke();
 
-      // wing (flaps on input)
+      // wing (flaps on input) — flat clay against the oxblood body
       const wf = bird.flapT>0 ? -0.8 : Math.sin(t/6)*0.25;
       ctx.save(); ctx.translate(-r*0.15, r*0.05); ctx.rotate(wf);
-      ctx.fillStyle=RED;
+      ctx.fillStyle=CLAY;
       ctx.beginPath(); ctx.ellipse(-r*0.2, r*0.05, r*0.62, r*0.4, 0, 0, TAU); ctx.fill();
       ctx.lineWidth=Math.max(1.5,2*S); ctx.strokeStyle=INK; ctx.stroke();
       ctx.restore();
 
-      // belly highlight
-      ctx.fillStyle='rgba(255,237,225,0.5)';
+      // belly highlight — cream, flat
+      ctx.fillStyle=BONE;
       ctx.beginPath(); ctx.ellipse(r*0.1, r*0.35, r*0.5, r*0.32, 0, 0, TAU); ctx.fill();
 
-      // beak
-      ctx.fillStyle=RED;
+      // beak — ochre
+      ctx.fillStyle=OCHRE;
       ctx.beginPath();
       ctx.moveTo(r*0.78,-r*0.12); ctx.lineTo(r*1.42,0); ctx.lineTo(r*0.78,r*0.18); ctx.closePath();
       ctx.fill(); ctx.lineWidth=Math.max(1.2,1.6*S); ctx.strokeStyle=INK; ctx.stroke();
@@ -497,8 +490,9 @@
       ctx.textAlign='center'; ctx.textBaseline='top';
       ctx.font=`${Math.round(64*S)}px 'Anton', system-ui, sans-serif`;
       const sy=Math.max(58, H*0.10);
-      ctx.fillStyle=INK; ctx.fillText(score, W/2+3*S, sy+3*S);     // hard shadow
-      ctx.fillStyle=BONE; ctx.fillText(score, W/2, sy);
+      // flat ink numerals on cream, with a soft ochre offset like mis-registered print
+      ctx.fillStyle=OCHRE; ctx.fillText(score, W/2+3*S, sy+3*S);
+      ctx.fillStyle=INK;   ctx.fillText(score, W/2, sy);
       ctx.restore();
     }
 
@@ -506,14 +500,14 @@
       if(mode!=='ready') return;
       ctx.save();
       ctx.textAlign='center';
-      // title
+      // title — oxblood display ink with a soft ochre offset
       ctx.font=`${Math.round(52*S)}px 'Anton', system-ui, sans-serif`;
-      ctx.fillStyle=INK; ctx.fillText('FLAPPY', W/2+3*S, H*0.24+3*S);
-      ctx.fillStyle=RED;  ctx.fillText('FLAPPY', W/2, H*0.24);
-      // blinking prompt
+      ctx.fillStyle=OCHRE;   ctx.fillText('FLAPPY', W/2+3*S, H*0.24+3*S);
+      ctx.fillStyle=OXBLOOD; ctx.fillText('FLAPPY', W/2, H*0.24);
+      // blinking prompt — warm brown ink
       if(Math.floor(t/26)%2===0){
         ctx.font=`700 ${Math.round(15*S)}px 'Space Mono', monospace`;
-        ctx.fillStyle=AMBER;
+        ctx.fillStyle=BROWN;
         ctx.fillText('TAP  ·  SPACE  ·  ↑   TO FLAP', W/2, H*0.62);
       }
       ctx.restore();
@@ -533,13 +527,8 @@
 
       ctx.restore();
 
-      // CRT-ish scanlines for the cabinet feel (cheap, deterministic)
-      ctx.globalAlpha=0.06; ctx.fillStyle='#000';
-      for(let y=0;y<H;y+=3) ctx.fillRect(0,y,W,1);
-      ctx.globalAlpha=1;
-
-      // death flash
-      if(flashT>0){ ctx.globalAlpha=flashT*0.5; ctx.fillStyle=RED; ctx.fillRect(0,0,W,H); ctx.globalAlpha=1; }
+      // death flash — brief, muted oxblood wash (gameplay feedback, no neon, no glow)
+      if(flashT>0){ ctx.globalAlpha=flashT*0.28; ctx.fillStyle=OXBLOOD; ctx.fillRect(0,0,W,H); ctx.globalAlpha=1; }
     }
 
     function frame(){

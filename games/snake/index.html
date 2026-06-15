@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
-  <meta name="theme-color" content="#07080c">
+  <meta name="theme-color" content="#efe6d2">
   <title>Snake — Gamf</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -15,11 +15,11 @@
       -webkit-user-select:none;user-select:none}
     .wrap{height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;
       padding:env(safe-area-inset-top) 12px env(safe-area-inset-bottom)}
-    canvas{background:#11131b;border-radius:14px;touch-action:none;
-      box-shadow:0 10px 40px rgba(0,0,0,.5),0 0 0 1px rgba(108,140,255,.12)}
+    canvas{background:#efe6d2;border-radius:14px;touch-action:none;
+      box-shadow:0 6px 18px rgba(34,31,23,.18),0 0 0 1px rgba(74,59,42,.18)}
   </style>
 </head>
-<body class="gx" style="--gx-accent:#ff7a6c">
+<body class="gx" style="--gx-accent:#9b3a22">
   <script src="../../gamf-icons.js"></script>
   <div class="gx-hud">
     <a class="gx-hud__back" href="../../"><svg class="gx-ico"><use href="#i-back"/></svg> Arcade</a>
@@ -86,7 +86,6 @@
     let particles=[];
     function burst(cx,cy,color,n=14){ for(let i=0;i<n;i++){ const a=rnd()*Math.PI*2, sp=0.6+rnd()*2.2;
       particles.push({x:cx,y:cy,vx:Math.cos(a)*sp,vy:Math.sin(a)*sp,life:1,color}); } }
-    let tBg=0; // animated background phase
 
     function placeFood(){ do { food={x:Math.floor(rnd()*N),y:Math.floor(rnd()*N)}; }
       while(snake.some(s=>s.x===food.x&&s.y===food.y)); }
@@ -106,39 +105,31 @@
     function tick(){ if(!alive||paused||helpOpen) return; dir=nextDir;
       const head={x:snake[0].x+dir.x, y:snake[0].y+dir.y};
       if(head.x<0||head.x>=N||head.y<0||head.y>=N||snake.some(s=>s.x===head.x&&s.y===head.y)){
-        burst((head.x+.5)*cell,(head.y+.5)*cell,'#ff7a6c',22); return end(); }
+        burst((head.x+.5)*cell,(head.y+.5)*cell,'#9b3a22',22); return end(); }
       snake.unshift(head);
       if(head.x===food.x&&head.y===food.y){ score++; document.getElementById('score').textContent=score;
-        burst((food.x+.5)*cell,(food.y+.5)*cell,'#7fe3a0',16);
+        burst((food.x+.5)*cell,(food.y+.5)*cell,'#c8923a',16);
         placeFood(); if(speed>60){ speed-=4; clearInterval(timer); timer=setInterval(tick,speed); } }
       else snake.pop(); }
 
-    function cellRect(x,y,c,r=4,glow=0){ const p=x*cell, q=y*cell;
-      ctx.save(); if(glow){ ctx.shadowBlur=glow; ctx.shadowColor=c; }
-      ctx.fillStyle=c; ctx.beginPath(); ctx.roundRect(p+1,q+1,cell-2,cell-2,r); ctx.fill(); ctx.restore(); }
+    function cellRect(x,y,c,r=4){ const p=x*cell, q=y*cell;
+      ctx.fillStyle=c; ctx.beginPath(); ctx.roundRect(p+1,q+1,cell-2,cell-2,r); ctx.fill(); }
 
     function draw(){ const S=N*cell;
-      // animated gradient background
-      const g=ctx.createLinearGradient(0,0,S,S);
-      g.addColorStop(0,'#11131b'); g.addColorStop(1,'#161a26');
-      ctx.fillStyle=g; ctx.fillRect(0,0,S,S);
-      // subtle moving grid glow
-      ctx.save(); ctx.globalAlpha=0.06+0.03*Math.sin(tBg/30); ctx.strokeStyle='#6c8cff'; ctx.lineWidth=1;
-      for(let i=1;i<N;i++){ ctx.beginPath(); ctx.moveTo(i*cell,0); ctx.lineTo(i*cell,S);
-        ctx.moveTo(0,i*cell); ctx.lineTo(S,i*cell); ctx.stroke(); } ctx.restore();
-      // food with pulsing glow
-      const pulse=10+5*Math.sin(tBg/8);
-      cellRect(food.x,food.y,'#ff7a6c',cell/2,pulse);
-      // snake gradient head->tail
+      // solid warm cream board
+      ctx.fillStyle='#efe6d2'; ctx.fillRect(0,0,S,S);
+      // food — oxblood accent (the one important element), matte flat ink
+      cellRect(food.x,food.y,'#9b3a22',cell/2);
+      // snake — warm earth tones, olive body fading to clay, warm brown head
       snake.forEach((s,i)=>{ const t=i/Math.max(1,snake.length-1);
-        const col=i===0?'#aecaff':`rgb(${Math.round(108+60*(1-t))},${Math.round(140+30*(1-t))},255)`;
-        cellRect(s.x,s.y,col,5,i===0?12:0); });
-      // particles
+        const col=i===0?'#4a3b2a'
+          :`rgb(${Math.round(111+(164-111)*t)},${Math.round(106+(98-106)*t)},${Math.round(59+(58-59)*t)})`;
+        cellRect(s.x,s.y,col,5); });
+      // particles — flat warm dots, no glow
       particles.forEach(p=>{ ctx.save(); ctx.globalAlpha=Math.max(0,p.life); ctx.fillStyle=p.color;
-        ctx.shadowBlur=8; ctx.shadowColor=p.color; ctx.beginPath();
-        ctx.arc(p.x,p.y,2.5*p.life,0,7); ctx.fill(); ctx.restore(); }); }
+        ctx.beginPath(); ctx.arc(p.x,p.y,2.5*p.life,0,7); ctx.fill(); ctx.restore(); }); }
 
-    function loop(){ tBg++;
+    function loop(){
       particles.forEach(p=>{ p.x+=p.vx; p.y+=p.vy; p.vy+=0.06; p.life-=0.03; });
       particles=particles.filter(p=>p.life>0);
       draw(); requestAnimationFrame(loop); }

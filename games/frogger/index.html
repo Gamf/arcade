@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
-  <meta name="theme-color" content="#15110e">
+  <meta name="theme-color" content="#efe6d2">
   <title>Frogger — Gamf</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -18,11 +18,11 @@
       -webkit-user-select:none;user-select:none}
     .wrap{height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;
       padding:env(safe-area-inset-top) 12px env(safe-area-inset-bottom)}
-    canvas{background:#15110e;border-radius:6px;touch-action:none;
-      box-shadow:6px 6px 0 #0a0806,0 0 0 1px var(--gx-line-2)}
+    canvas{background:#efe6d2;border-radius:6px;touch-action:none;
+      box-shadow:6px 6px 0 #221f17,0 0 0 1px var(--gx-line-2)}
   </style>
 </head>
-<body class="gx" style="--gx-accent:#ff7a6c">
+<body class="gx" style="--gx-accent:#9b3a22">
   <script src="../../gamf-icons.js"></script>
   <div class="gx-hud">
     <a class="gx-hud__back" href="../../"><svg class="gx-ico"><use href="#i-back"/></svg> Arcade</a>
@@ -73,10 +73,11 @@
     import { onSwipe } from './touch.js';
 
     const SLUG='frogger', BEST_KEY='gamf-arcade-'+SLUG+'-best';
-    // palette
-    const BG='#15110e', RED='#d8412b', AMBER='#e8a23a', BONE='#f4ede1';
-    const SCREEN='#100c09', LINE='#36281d', WATER='#1c2a30', ROAD='#211a14';
-    const GRASS='#1a241a', LOG='#6b4a2c', LOGTOP='#84603a', FROG='#7fbf4a', FROGDK='#5a9433';
+    // palette — warm 1970s print catalogue (matte earth tones, no glow/neon)
+    const BG='#efe6d2', CREAM='#efe6d2', BONE='#efe6d2', INK='#221f17';
+    const OXBLOOD='#9b3a22', OCHRE='#c8923a', OLIVE='#6f6a3b', CLAY='#a4623a', BROWN='#4a3b2a';
+    const SCREEN='#e3d8be', LINE='#4a3b2a', WATER='#c2c4a8', ROAD='#cdb893';
+    const GRASS='#b9bd92', LOG='#6f5a3c', LOGTOP='#8a6f48', FROG='#9b3a22', FROGDK='#7a2c19';
 
     // seeded LCG — no Math.random / Date
     let seed=20260613>>>0;
@@ -191,7 +192,7 @@
       if(g<0 || goals[g]){ return loseLife(); }       // missed a slot / occupied
       goals[g]=true;
       score+=50; $('score').textContent=score;
-      burst((frog.col+0.5)*cell,(frog.row+0.5)*cell,AMBER,24);
+      burst((frog.col+0.5)*cell,(frog.row+0.5)*cell,OCHRE,24);
       if(goals.every(Boolean)){ score+=200; $('score').textContent=score; win=true;
         setTimeout(()=>{ if(alive){ win=false; nextLevel(); } }, 700);
       } else { placeFrog(); }
@@ -199,7 +200,7 @@
 
     function loseLife(){
       lives--; $('lives').textContent=Math.max(0,lives);
-      burst((frog.col+0.5)*cell,(frog.row+0.5)*cell,RED,26);
+      burst((frog.col+0.5)*cell,(frog.row+0.5)*cell,OXBLOOD,26);
       if(lives<=0){ return end(); }
       placeFrog();
     }
@@ -257,7 +258,7 @@
       const lift=hopAnim*cell*0.18;
       const s=cell, x=px*cell, y=py*cell-lift;
       // shadow
-      ctx.save(); ctx.fillStyle='rgba(0,0,0,.35)';
+      ctx.save(); ctx.fillStyle='rgba(34,31,23,.22)';
       ctx.beginPath(); ctx.ellipse(x+s/2,py*cell+s*0.82,s*0.32,s*0.14,0,0,7); ctx.fill(); ctx.restore();
       // body
       ctx.fillStyle=FROG;
@@ -269,7 +270,7 @@
       // eyes
       ctx.fillStyle=BONE;
       ctx.beginPath(); ctx.arc(x+s*0.36,y+s*0.28,s*0.1,0,7); ctx.arc(x+s*0.64,y+s*0.28,s*0.1,0,7); ctx.fill();
-      ctx.fillStyle='#1b0f0c';
+      ctx.fillStyle=INK;
       ctx.beginPath(); ctx.arc(x+s*0.36,y+s*0.28,s*0.045,0,7); ctx.arc(x+s*0.64,y+s*0.28,s*0.045,0,7); ctx.fill();
     }
 
@@ -286,18 +287,18 @@
         else if(L.type==='median'||L.type==='safe') c=GRASS;
         else c=ROAD;
         ctx.fillStyle=c; ctx.fillRect(0,y,W,cell);
-        // road lane dashes
+        // road lane dashes — matte ink, solid
         if(L&&L.type==='road'){
-          ctx.strokeStyle='#3a2c20'; ctx.lineWidth=Math.max(1,cell*0.05);
+          ctx.strokeStyle=BONE; ctx.lineWidth=Math.max(1,cell*0.05);
           ctx.setLineDash([cell*0.28,cell*0.28]);
           ctx.beginPath(); ctx.moveTo(0,y+cell); ctx.lineTo(W,y+cell); ctx.stroke();
           ctx.setLineDash([]);
         }
-        // water shimmer
+        // river edge — static printed ripple lines (no glow, no animation)
         if(L&&L.type==='river'){
-          ctx.save(); ctx.globalAlpha=0.08+0.04*Math.sin(tBg/22+i);
-          ctx.strokeStyle='#5fa8b0'; ctx.lineWidth=1;
-          for(let k=0;k<COLS;k++){ const wx=(k+0.5)*cell+Math.sin(tBg/18+k+i)*cell*0.12;
+          ctx.save(); ctx.globalAlpha=0.5;
+          ctx.strokeStyle=OLIVE; ctx.lineWidth=1;
+          for(let k=0;k<COLS;k++){ const wx=(k+0.5)*cell;
             ctx.beginPath(); ctx.moveTo(wx-cell*0.18,y+cell*0.6); ctx.lineTo(wx+cell*0.18,y+cell*0.6); ctx.stroke(); }
           ctx.restore();
         }
@@ -308,9 +309,9 @@
       // goal slots
       for(let g=0;g<goalCols.length;g++){
         const gx=goalCols[g]*cell, gy=0;
-        ctx.fillStyle=goals[g]?FROGDK:SCREEN;
+        ctx.fillStyle=goals[g]?CREAM:SCREEN;
         roundedRect(gx+cell*0.06,gy+cell*0.06,cell*0.88,cell*0.88,cell*0.18); ctx.fill();
-        ctx.strokeStyle=goals[g]?FROG:AMBER; ctx.lineWidth=Math.max(1.5,cell*0.06);
+        ctx.strokeStyle=goals[g]?OXBLOOD:OLIVE; ctx.lineWidth=Math.max(1.5,cell*0.06);
         roundedRect(gx+cell*0.06,gy+cell*0.06,cell*0.88,cell*0.88,cell*0.18); ctx.stroke();
         if(goals[g]) drawFrog(goalCols[g],0);
       }
@@ -322,16 +323,16 @@
         if(ln.type==='road'){
           ln.objs.forEach((o,k)=>{
             const x=o.x*cell, w=o.w*cell;
-            // car body, colour alternates red/amber by lane
-            const col=(i%2===0)?RED:AMBER;
+            // car body — matte earth tones alternating clay/ochre by lane
+            const col=(i%2===0)?CLAY:OCHRE;
             ctx.fillStyle=col; roundedRect(x+cell*0.08,y+cell*0.16,w-cell*0.16,cell*0.68,cell*0.16); ctx.fill();
             // windshield
-            ctx.fillStyle='#1b0f0c';
+            ctx.fillStyle=BROWN;
             const wd=Math.min(w*0.3,cell*0.4);
             const wx = ln.dir>0 ? x+w-cell*0.16-wd : x+cell*0.16;
             roundedRect(wx,y+cell*0.26,wd,cell*0.34,cell*0.08); ctx.fill();
             // wheels
-            ctx.fillStyle='#0a0806';
+            ctx.fillStyle=INK;
             ctx.beginPath();
             ctx.arc(x+cell*0.28,y+cell*0.84,cell*0.1,0,7);
             ctx.arc(x+w-cell*0.28,y+cell*0.84,cell*0.1,0,7); ctx.fill();
@@ -342,7 +343,7 @@
             ctx.fillStyle=LOG; roundedRect(x+cell*0.04,y+cell*0.16,w-cell*0.08,cell*0.68,cell*0.2); ctx.fill();
             ctx.fillStyle=LOGTOP; roundedRect(x+cell*0.04,y+cell*0.16,w-cell*0.08,cell*0.22,cell*0.16); ctx.fill();
             // bark rings
-            ctx.strokeStyle='#4a3320'; ctx.lineWidth=1;
+            ctx.strokeStyle=BROWN; ctx.lineWidth=1;
             for(let s=1;s<o.w;s++){ const sx=x+s*cell; ctx.beginPath();
               ctx.moveTo(sx,y+cell*0.18); ctx.lineTo(sx,y+cell*0.82); ctx.stroke(); }
           });
@@ -357,7 +358,7 @@
         ctx.beginPath(); ctx.arc(p.x,p.y,Math.max(0.5,3*p.life),0,7); ctx.fill(); ctx.restore(); });
 
       // level banner
-      ctx.fillStyle='rgba(244,237,225,.5)'; ctx.font=`700 ${Math.round(cell*0.42)}px 'Space Mono',monospace`;
+      ctx.fillStyle='rgba(34,31,23,.55)'; ctx.font=`700 ${Math.round(cell*0.42)}px 'Space Mono',monospace`;
       ctx.textAlign='left'; ctx.fillText('LVL '+level, 6, H-6);
       ctx.textAlign='start';
     }

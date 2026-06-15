@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
-  <meta name="theme-color" content="#07080c">
+  <meta name="theme-color" content="#efe6d2">
   <title>Asteroids — Gamf</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -19,15 +19,14 @@
       bottom: calc(env(safe-area-inset-bottom) + 70px); width: 84px; height: 84px; border-radius: 50%;
       display: grid; place-items: center; cursor: pointer; pointer-events: auto;
       font-family: var(--gx-font-display); font-weight: 700; font-size: var(--fs-sm); letter-spacing: .08em;
-      color: #0a0c12; border: 1px solid color-mix(in srgb, #fff 22%, transparent);
-      background: radial-gradient(120% 120% at 30% 25%, #ffd2cb 0%, var(--gx-accent) 70%);
-      box-shadow: 0 8px 26px color-mix(in srgb, var(--gx-accent) 55%, transparent), inset 0 1px 0 rgba(255,255,255,.5);
+      color: #efe6d2; border: 1px solid #7e2f1b;
+      background: #9b3a22;
       transition: transform var(--t-fast); }
     .fire-btn:active { transform: scale(.92); }
     .fire-btn svg { width: 24px; height: 24px; }
   </style>
 </head>
-<body class="gx" style="--gx-accent:#ff7a6c">
+<body class="gx" style="--gx-accent:#9b3a22">
   <script src="../../gamf-icons.js"></script>
 
   <canvas id="c"></canvas>
@@ -90,7 +89,12 @@
     import { onDrag } from './touch.js';
     const SLUG='asteroids', BEST_KEY='gamf-arcade-'+SLUG+'-best';
     const canvas=document.getElementById('c'), ctx=canvas.getContext('2d');
-    const ACCENT='#ff7a6c', BLUE='#6c8cff', MINT='#7fe3a0', WARN='#ffb454';
+    // warm editorial palette — matte printed ink, no neon
+    const PAPER='#efe6d2',                       // cream stock backdrop
+          ACCENT='#9b3a22',                      // oxblood — the one accent (ship + bullets)
+          OCHRE='#c8923a', OLIVE='#6f6a3b', BROWN='#4a3b2a';
+    // role aliases used through the code: ACCENT=ship/shots, BROWN=rocks, OCHRE=thrust/spark, OLIVE=clear
+    const BLUE=ACCENT, MINT=OLIVE, WARN=OCHRE;
 
     let W,H,dpr;
     function resize(){ dpr=Math.min(devicePixelRatio||1,2); W=innerWidth; H=innerHeight;
@@ -317,19 +321,17 @@
     function drawShip(){
       if(invuln>0 && Math.floor(t/4)%2===0) return;   // blink while invulnerable
       ctx.save(); ctx.translate(ship.x,ship.y); ctx.rotate(ship.a);
-      // thrust flame
-      if(ship.thrusting){ ctx.save(); ctx.shadowBlur=16; ctx.shadowColor=WARN; ctx.fillStyle=WARN;
+      // thrust flame — flat ochre ink, no glow
+      if(ship.thrusting){ ctx.save(); ctx.fillStyle=OCHRE;
         ctx.globalAlpha=0.6+0.4*Math.sin(t/2); ctx.beginPath();
         ctx.moveTo(-ship.r,0); ctx.lineTo(-ship.r-rng(8,16),0);
         ctx.lineTo(-ship.r,3); ctx.closePath();
         ctx.moveTo(-ship.r,0); ctx.lineTo(-ship.r-rng(8,16),0); ctx.lineTo(-ship.r,-3); ctx.closePath();
         ctx.fill(); ctx.restore(); }
-      // hull — glowing vector triangle
-      ctx.shadowBlur=18; ctx.shadowColor=BLUE; ctx.lineJoin='round';
-      ctx.strokeStyle='#cfe0ff'; ctx.lineWidth=2.4;
-      const g=ctx.createLinearGradient(-ship.r,0,ship.r,0);
-      g.addColorStop(0,'rgba(108,140,255,.25)'); g.addColorStop(1,'rgba(108,140,255,.05)');
-      ctx.fillStyle=g;
+      // hull — flat oxblood printed triangle (the one accent)
+      ctx.lineJoin='round';
+      ctx.strokeStyle=ACCENT; ctx.lineWidth=2.4;
+      ctx.fillStyle='rgba(155,58,34,.12)';
       ctx.beginPath();
       ctx.moveTo(ship.r,0);
       ctx.lineTo(-ship.r,ship.r*0.72);
@@ -341,9 +343,8 @@
 
     function drawRock(rk){
       ctx.save(); ctx.translate(rk.x,rk.y); ctx.rotate(rk.a);
-      ctx.shadowBlur=14; ctx.shadowColor=MINT;
-      ctx.strokeStyle='#bfe8d6'; ctx.lineWidth=2; ctx.lineJoin='round';
-      ctx.fillStyle='rgba(127,227,160,.07)';
+      ctx.strokeStyle=BROWN; ctx.lineWidth=2; ctx.lineJoin='round';
+      ctx.fillStyle='rgba(74,59,42,.10)';
       ctx.beginPath();
       rk.shape.forEach((v,i)=>{ const px=Math.cos(v.ang)*v.rad, py=Math.sin(v.ang)*v.rad;
         i?ctx.lineTo(px,py):ctx.moveTo(px,py); });
@@ -351,28 +352,16 @@
       ctx.restore();
     }
 
-    function drawBullet(b){ ctx.save(); ctx.shadowBlur=14; ctx.shadowColor=WARN;
-      const g=ctx.createRadialGradient(b.x,b.y,0,b.x,b.y,b.r*2);
-      g.addColorStop(0,'#fff4d6'); g.addColorStop(1,WARN); ctx.fillStyle=g;
+    function drawBullet(b){ ctx.save(); ctx.fillStyle=ACCENT;
       ctx.beginPath(); ctx.arc(b.x,b.y,b.r,0,TAU); ctx.fill(); ctx.restore(); }
 
     function render(){
-      // layered space backdrop
-      const g=ctx.createRadialGradient(W*0.5,H*0.35,0,W*0.5,H*0.35,Math.max(W,H)*0.8);
-      g.addColorStop(0,'#0d1018'); g.addColorStop(1,'#07080c');
-      ctx.fillStyle=g; ctx.fillRect(0,0,W,H);
-      // drifting starfield (seeded, deterministic offsets)
-      ctx.save();
-      let s2=20240601;
-      const rs=()=> (s2=(s2*1103515245+12345)&0x7fffffff)/0x7fffffff;
-      for(let i=0;i<90;i++){ const sx=(rs()*W + t*(0.1+rs()*0.3))%W; const sy=rs()*H;
-        const tw=0.3+0.7*Math.abs(Math.sin(t/40+i)); ctx.globalAlpha=tw*0.6;
-        ctx.fillStyle=i%9===0?BLUE:'#dfe6f5';
-        ctx.fillRect(sx, sy, tw*1.6, tw*1.6); }
-      ctx.restore();
+      // flat cream stock — clean printed page, no gradient / starfield / glow
+      ctx.fillStyle=PAPER; ctx.fillRect(0,0,W,H);
 
+      // small gameplay feedback particles — flat warm ink, no glow
       particles.forEach(p=>{ ctx.save(); ctx.globalAlpha=Math.max(0,p.life); ctx.fillStyle=p.color;
-        ctx.shadowBlur=8; ctx.shadowColor=p.color; ctx.beginPath();
+        ctx.beginPath();
         ctx.arc(p.x,p.y,p.r*Math.max(0.3,p.life),0,TAU); ctx.fill(); ctx.restore(); });
 
       rocks.forEach(drawRock);
@@ -385,7 +374,7 @@
 
     function frame(){
       if(alive && !paused) update();
-      else { // keep particles + starfield alive on overlays
+      else { // keep particles ticking on overlays
         for(const p of particles){ p.x+=p.vx; p.y+=p.vy; p.vx*=0.96; p.vy*=0.96; p.life-=0.022; }
         particles=particles.filter(p=>p.life>0); t++;
       }

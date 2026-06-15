@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
-  <meta name="theme-color" content="#07080c">
+  <meta name="theme-color" content="#efe6d2">
   <title>Breakout — Gamf</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -16,7 +16,7 @@
     canvas{display:block;width:100%;height:100%;touch-action:none}
   </style>
 </head>
-<body class="gx" style="--gx-accent:#ff7a6c">
+<body class="gx" style="--gx-accent:#9b3a22">
   <script src="../../gamf-icons.js"></script>
   <div class="gx-hud">
     <a class="gx-hud__back" href="../../"><svg class="gx-ico"><use href="#i-back"/></svg> Arcade</a>
@@ -75,7 +75,7 @@
     // play field is a centered column so it looks good on wide screens too
     let field={x:0,y:0,w:0,h:0};
     const COLS=8;
-    const ROW_COLORS=['#ff7a6c','#ffb36c','#ffe06c','#7fe3a0','#6cdfff','#6c8cff','#b08cff'];
+    const ROW_COLORS=['#a4623a','#c8923a','#6f6a3b','#4a3b2a','#a4623a','#c8923a','#6f6a3b'];
     let brickW=0, brickH=22, brickGap=6, topPad=70;
 
     const paddle={ w:0, h:16, x:0, y:0 };
@@ -126,7 +126,7 @@
     function togglePause(force){ if(!alive) return;
       paused=(force===undefined)?!paused:force;
       document.getElementById('paused').classList.toggle('gx-show',paused); }
-    function loseLife(){ lives--; updateHud(); burst(ball.x,paddle.y,'#ff7a6c',22);
+    function loseLife(){ lives--; updateHud(); burst(ball.x,paddle.y,'#9b3a22',22);
       if(lives<=0) return end(false); resetBallToPaddle(); }
     function end(victory){ alive=false; won=victory;
       let isNew=false;
@@ -171,7 +171,7 @@
         const ang=-Math.PI/2 + hit*(Math.PI*0.38);
         const sp=Math.hypot(ball.vx,ball.vy);
         ball.vx=Math.cos(ang)*sp; ball.vy=Math.sin(ang)*sp;
-        burst(ball.x,paddle.y,'#9ab4ff',8);
+        burst(ball.x,paddle.y,'#6f6a3b',8);
       }
       // bricks
       for(const b of bricks){ if(!b.alive) continue; const r=brickRect(b);
@@ -191,19 +191,15 @@
     }
 
     function roundedBrick(r,color,frac){
-      ctx.save(); ctx.shadowBlur=10; ctx.shadowColor=color;
-      const g=ctx.createLinearGradient(r.x,r.y,r.x,r.y+r.h);
-      g.addColorStop(0, lighten(color,0.25)); g.addColorStop(1,color);
-      ctx.globalAlpha=0.55+0.45*frac; ctx.fillStyle=g;
+      ctx.save();
+      // flat matte ink fill; damaged bricks read slightly lighter
+      ctx.globalAlpha=0.65+0.35*frac; ctx.fillStyle=color;
       ctx.beginPath(); ctx.roundRect(r.x,r.y,r.w,r.h,6); ctx.fill();
-      ctx.globalAlpha=0.25; ctx.fillStyle='#ffffff';
+      // soft cream top stripe for a printed-ink highlight (no glow)
+      ctx.globalAlpha=0.18; ctx.fillStyle='#efe6d2';
       ctx.beginPath(); ctx.roundRect(r.x+2,r.y+2,r.w-4,r.h*0.4,4); ctx.fill();
       ctx.restore();
     }
-    function lighten(hex,amt){ const n=parseInt(hex.slice(1),16);
-      let r=(n>>16)&255,g=(n>>8)&255,b=n&255;
-      r=Math.min(255,r+255*amt); g=Math.min(255,g+255*amt); b=Math.min(255,b+255*amt);
-      return `rgb(${r|0},${g|0},${b|0})`; }
 
     function frame(){ t++;
       if(alive&&!paused){
@@ -222,37 +218,25 @@
     }
 
     function render(){
-      // animated vertical background gradient with drifting hue glow
-      const g=ctx.createLinearGradient(0,0,0,H);
-      g.addColorStop(0,'#0e0f13'); g.addColorStop(1,'#131726'); ctx.fillStyle=g; ctx.fillRect(0,0,W,H);
-      // soft moving glow blobs in background
-      ctx.save(); ctx.globalAlpha=0.10;
-      for(let i=0;i<2;i++){ const bx=field.x+field.w*(0.3+0.4*i)+Math.sin(t/90+i)*40;
-        const by=H*0.4+Math.cos(t/110+i)*60; const rg=ctx.createRadialGradient(bx,by,0,bx,by,180);
-        rg.addColorStop(0,i?'#6c8cff':'#7fe3a0'); rg.addColorStop(1,'rgba(0,0,0,0)');
-        ctx.fillStyle=rg; ctx.fillRect(0,0,W,H); } ctx.restore();
-      // field border
-      ctx.save(); ctx.globalAlpha=0.18; ctx.strokeStyle='#6c8cff'; ctx.lineWidth=2;
+      // clean solid warm cream page (no gradient, no moving glow blobs)
+      ctx.fillStyle='#efe6d2'; ctx.fillRect(0,0,W,H);
+      // field border — flat warm-brown rule, no glow
+      ctx.save(); ctx.globalAlpha=0.35; ctx.strokeStyle='#4a3b2a'; ctx.lineWidth=2;
       ctx.beginPath(); ctx.roundRect(field.x,2,field.w,H-4,10); ctx.stroke(); ctx.restore();
       // bricks
       for(const b of bricks){ if(!b.alive) continue; roundedBrick(brickRect(b),b.color,b.hp/b.max); }
-      // paddle
-      ctx.save(); ctx.shadowBlur=16; ctx.shadowColor='#6c8cff';
-      const pg=ctx.createLinearGradient(paddle.x,0,paddle.x+paddle.w,0);
-      pg.addColorStop(0,'#9ab4ff'); pg.addColorStop(0.5,'#6c8cff'); pg.addColorStop(1,'#9ab4ff');
-      ctx.fillStyle=pg; ctx.beginPath(); ctx.roundRect(paddle.x,paddle.y,paddle.w,paddle.h,9); ctx.fill(); ctx.restore();
-      // ball
-      ctx.save(); ctx.shadowBlur=22; ctx.shadowColor='#ff7a6c';
-      const bg=ctx.createRadialGradient(ball.x-2,ball.y-2,1,ball.x,ball.y,ball.r);
-      bg.addColorStop(0,'#ffe3dd'); bg.addColorStop(1,'#ff7a6c'); ctx.fillStyle=bg;
+      // paddle — flat olive ink, no glow
+      ctx.save(); ctx.fillStyle='#6f6a3b';
+      ctx.beginPath(); ctx.roundRect(paddle.x,paddle.y,paddle.w,paddle.h,9); ctx.fill(); ctx.restore();
+      // ball — the one oxblood accent, flat matte, no glow
+      ctx.save(); ctx.fillStyle='#9b3a22';
       ctx.beginPath(); ctx.arc(ball.x,ball.y,ball.r,0,7); ctx.fill(); ctx.restore();
-      // particles
+      // particles — flat coloured dots, no glow
       particles.forEach(p=>{ ctx.save(); ctx.globalAlpha=Math.max(0,p.life); ctx.fillStyle=p.color;
-        ctx.shadowBlur=8; ctx.shadowColor=p.color; ctx.beginPath();
-        ctx.arc(p.x,p.y,2.6*p.life,0,7); ctx.fill(); ctx.restore(); });
+        ctx.beginPath(); ctx.arc(p.x,p.y,2.6*p.life,0,7); ctx.fill(); ctx.restore(); });
       // "tap to launch" prompt
       if(alive&&!launched&&!paused){ ctx.save(); ctx.globalAlpha=0.5+0.3*Math.sin(t/12);
-        ctx.fillStyle='#aeb4c2'; ctx.font='600 15px system-ui'; ctx.textAlign='center';
+        ctx.fillStyle='#4a3b2a'; ctx.font='600 15px system-ui'; ctx.textAlign='center';
         ctx.fillText('tap or Space to launch', field.x+field.w/2, paddle.y-30); ctx.restore(); }
     }
 

@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
-  <meta name="theme-color" content="#15110e">
+  <meta name="theme-color" content="#2a2118">
   <title>Missile Command — Gamf</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -20,7 +20,7 @@
     canvas { display: block; width: 100%; height: 100%; touch-action: none; }
   </style>
 </head>
-<body class="gx" style="--gx-accent:#ff7a6c">
+<body class="gx" style="--gx-accent:#9b3a22">
   <script src="../../gamf-icons.js"></script>
 
   <canvas id="c"></canvas>
@@ -82,9 +82,16 @@
     const SLUG='missile', BEST_KEY='gamf-arcade-'+SLUG+'-best';
     const canvas=document.getElementById('c'), ctx=canvas.getContext('2d');
 
-    // ---- arcade palette ----
-    const BG='#15110e', RED='#d8412b', AMBER='#e8a23a', BONE='#f4ede1';
-    const BONE_DIM='#b3a48f', GROUND='#211a14', LINE='#36281d';
+    // ---- warm 1970s catalogue palette (flat matte ink, no neon, no glow) ----
+    // dusk sky (this sky-defence game reads better dark) + warm earth tones
+    const BG='#2a2118';                 // warm dusk sky base
+    const SKY_TOP='#3a2c1f';            // slightly lighter warm dusk at top
+    const RED='#9b3a22';                // oxblood — the single accent (enemy threat)
+    const AMBER='#c8923a';              // ochre — interceptors / friendly highlights
+    const BONE='#efe6d2';              // cream — turret / structures
+    const BONE_DIM='#a4623a';          // clay — dim sky speckle
+    const OLIVE='#6f6a3b';             // olive — supporting earth tone
+    const GROUND='#4a3b2a', LINE='#221f17';  // warm brown ground, ink line
     const TAU=Math.PI*2;
 
     let W,H,dpr;
@@ -394,7 +401,7 @@
     function drawCity(c){
       const baseW=c.w, x=c.x, y=c.y;
       if(c.alive){
-        ctx.fillStyle=AMBER;
+        ctx.fillStyle=BONE;
         // little skyline: a few blocks of varying height (deterministic by x)
         let s2=Math.floor(x*7.13)|1;
         const lr=()=> ((s2=(s2*1103515245+12345)&0x7fffffff)/0x7fffffff);
@@ -402,15 +409,15 @@
         for(let i=0;i<blocks;i++){
           const bw=baseW/blocks;
           const bh=8+lr()*16;
-          ctx.fillStyle = i%2? AMBER : '#caa24b';
+          ctx.fillStyle = i%2? BONE : OLIVE;
           ctx.fillRect(x-baseW/2 + i*bw, y-bh, bw-1.5, bh);
         }
         // base slab
-        ctx.fillStyle=AMBER;
+        ctx.fillStyle=BONE;
         ctx.fillRect(x-baseW/2, y-3, baseW, 3);
       } else {
         // rubble
-        ctx.fillStyle='#5a4632';
+        ctx.fillStyle=GROUND;
         ctx.fillRect(x-baseW/2, y-4, baseW, 4);
         ctx.fillStyle=LINE;
         ctx.fillRect(x-baseW*0.32, y-7, baseW*0.22, 3);
@@ -420,8 +427,8 @@
 
     function drawBattery(){
       const x=battery.x, y=battery.y, r=battery.r;
-      // bunker
-      ctx.fillStyle=RED;
+      // bunker (supporting clay tone — accent reserved for the enemy threat)
+      ctx.fillStyle=OLIVE;
       ctx.beginPath();
       ctx.moveTo(x-r, y);
       ctx.lineTo(x-r*0.5, y-r*0.75);
@@ -447,17 +454,16 @@
       if(shakeT>0){ const m=shakeT*0.5; sx=(rnd()*2-1)*m; sy=(rnd()*2-1)*m; }
       ctx.save(); ctx.translate(sx,sy);
 
-      // sky gradient (over-draw past edges so shake never reveals the clear)
+      // sky (flat warm dusk; gentle solid gradient, no glow; over-draw past edges)
       const g=ctx.createLinearGradient(0,0,0,groundY);
-      g.addColorStop(0,'#1d140d'); g.addColorStop(1,BG);
+      g.addColorStop(0,SKY_TOP); g.addColorStop(1,BG);
       ctx.fillStyle=g; ctx.fillRect(-24,-24,W+48,groundY+48);
 
-      // stars (deterministic, gentle twinkle)
+      // static printed speckle (deterministic, no twinkle/glow — like halftone dots)
       let s3=0x2545F491;
       const rs=()=> (s3=(s3*1103515245+12345)&0x7fffffff)/0x7fffffff;
       for(let i=0;i<STAR_COUNT;i++){ const px=rs()*W, py=rs()*groundY*0.92;
-        const tw=0.35+0.65*Math.abs(Math.sin(t/55+i));
-        ctx.globalAlpha=tw*0.5; ctx.fillStyle=i%11===0?AMBER:BONE_DIM;
+        ctx.globalAlpha=0.16; ctx.fillStyle=i%11===0?AMBER:BONE_DIM;
         ctx.fillRect(px,py,1.4,1.4); }
       ctx.globalAlpha=1;
 
@@ -465,35 +471,33 @@
       ctx.fillStyle=GROUND; ctx.fillRect(-24,groundY,W+48,H-groundY+48);
       ctx.fillStyle=LINE; ctx.fillRect(-24,groundY,W+48,2);
 
-      // enemy missile trails
+      // enemy missile trails (oxblood — the single threat accent, flat ink)
       for(const en of enemies){
         ctx.strokeStyle=RED; ctx.lineWidth=1.6;
-        ctx.globalAlpha=0.85;
         ctx.beginPath(); ctx.moveTo(en.sx,en.sy); ctx.lineTo(en.x,en.y); ctx.stroke();
-        ctx.globalAlpha=1;
-        ctx.fillStyle='#ff9a86'; ctx.beginPath(); ctx.arc(en.x,en.y,en.r,0,TAU); ctx.fill();
+        ctx.fillStyle=RED; ctx.beginPath(); ctx.arc(en.x,en.y,en.r,0,TAU); ctx.fill();
       }
 
-      // interceptor trails
+      // interceptor trails (cream line, ochre head — flat)
       for(const m of interceptors){
-        ctx.strokeStyle=BONE; ctx.lineWidth=1.4; ctx.globalAlpha=0.7;
+        ctx.strokeStyle=BONE_DIM; ctx.lineWidth=1.4;
         ctx.beginPath(); ctx.moveTo(battery.x,battery.y-battery.r); ctx.lineTo(m.x,m.y); ctx.stroke();
-        ctx.globalAlpha=1;
         ctx.fillStyle=AMBER; ctx.beginPath(); ctx.arc(m.x,m.y,2.4,0,TAU); ctx.fill();
-        // target reticle
-        ctx.strokeStyle='#ffffff55'; ctx.lineWidth=1;
+        // target reticle (matte cream cross, no glow)
+        ctx.strokeStyle='rgba(239,230,210,0.4)'; ctx.lineWidth=1;
         ctx.beginPath(); ctx.moveTo(m.tx-5,m.ty); ctx.lineTo(m.tx+5,m.ty);
         ctx.moveTo(m.tx,m.ty-5); ctx.lineTo(m.tx,m.ty+5); ctx.stroke();
       }
 
-      // blasts (filled glow ring)
+      // blasts (flat matte ink disc — solid ochre with clay rim, no radial glow)
       for(const b of blasts){
-        const a=b.phase==='shrink'?0.8:1;
-        const rg=ctx.createRadialGradient(b.x,b.y,0,b.x,b.y,b.r);
-        rg.addColorStop(0,'rgba(244,237,225,'+(0.9*a)+')');
-        rg.addColorStop(0.5,'rgba(232,162,58,'+(0.7*a)+')');
-        rg.addColorStop(1,'rgba(216,65,43,0)');
-        ctx.fillStyle=rg; ctx.beginPath(); ctx.arc(b.x,b.y,b.r,0,TAU); ctx.fill();
+        const a=b.phase==='shrink'?0.7:0.9;
+        ctx.globalAlpha=a;
+        ctx.fillStyle=AMBER; ctx.beginPath(); ctx.arc(b.x,b.y,b.r,0,TAU); ctx.fill();
+        ctx.globalAlpha=a*0.9;
+        ctx.strokeStyle=RED; ctx.lineWidth=2;
+        ctx.beginPath(); ctx.arc(b.x,b.y,b.r,0,TAU); ctx.stroke();
+        ctx.globalAlpha=1;
       }
 
       // particles
@@ -503,7 +507,7 @@
 
       // debris chunks
       for(const d of debris){ ctx.save(); ctx.globalAlpha=Math.max(0,d.life);
-        ctx.translate(d.x,d.y); ctx.rotate(d.rot); ctx.fillStyle='#5a4632';
+        ctx.translate(d.x,d.y); ctx.rotate(d.rot); ctx.fillStyle=GROUND;
         ctx.fillRect(-d.s/2,-d.s/2,d.s,d.s); ctx.restore(); }
       ctx.globalAlpha=1;
 
@@ -512,7 +516,7 @@
       drawBattery();
 
       // keyboard aim guide line when not firing-by-tap
-      ctx.strokeStyle='rgba(244,237,225,0.18)'; ctx.lineWidth=1; ctx.setLineDash([4,6]);
+      ctx.strokeStyle='rgba(239,230,210,0.18)'; ctx.lineWidth=1; ctx.setLineDash([4,6]);
       ctx.beginPath(); ctx.moveTo(battery.x,battery.y-battery.r);
       const reach=Math.min(H*0.82,900);
       ctx.lineTo(battery.x+Math.cos(aimAngle)*reach,(battery.y-battery.r)+Math.sin(aimAngle)*reach);
@@ -526,13 +530,13 @@
       }
       if(waveClearDelay>0 && waveClearDelay<=70){
         ctx.save(); ctx.globalAlpha=Math.min(1,waveClearDelay/30);
-        ctx.fillStyle=AMBER; ctx.font="700 22px 'Anton', sans-serif";
+        ctx.fillStyle=AMBER; ctx.font="900 22px 'Fraunces', Georgia, serif";
         ctx.textAlign='center';
         ctx.fillText('WAVE '+(wave+1)+' INCOMING', W/2, H*0.32);
         ctx.restore();
       }
-      // damage flash
-      if(flashT>0){ ctx.fillStyle='rgba(216,65,43,'+(flashT/10*0.28)+')'; ctx.fillRect(0,0,W,H); }
+      // damage flash (warm oxblood wash, no glow)
+      if(flashT>0){ ctx.fillStyle='rgba(155,58,34,'+(flashT/10*0.24)+')'; ctx.fillRect(0,0,W,H); }
     }
 
     function frame(){

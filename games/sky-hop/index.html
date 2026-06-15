@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
-  <meta name="theme-color" content="#15110e">
+  <meta name="theme-color" content="#efe6d2">
   <title>Sky Hop — Gamf</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -16,7 +16,7 @@
     canvas{display:block;width:100%;height:100%;touch-action:none}
   </style>
 </head>
-<body class="gx" style="--gx-accent:#ff7a6c">
+<body class="gx" style="--gx-accent:#9b3a22;background:#efe6d2">
   <script src="../../gamf-icons.js"></script>
   <div class="gx-hud">
     <a class="gx-hud__back" href="../../"><svg class="gx-ico"><use href="#i-back"/></svg> Arcade</a>
@@ -70,9 +70,10 @@
       canvas.width=W*dpr; canvas.height=H*dpr; ctx.setTransform(dpr,0,0,dpr,0,0); layout(); }
     addEventListener('resize', resize);
 
-    // arcade palette
-    const C={ bg:'#15110e', bg2:'#221812', red:'#d8412b', amber:'#e8a23a', bone:'#f4ede1',
-      line:'#4a3826', dim:'#80715c' };
+    // warm 1970s print-catalogue palette (matte, flat, no glow)
+    const C={ bg:'#efe6d2', bg2:'#e6dcc4', oxblood:'#9b3a22', ochre:'#c8923a',
+      olive:'#6f6a3b', clay:'#a4623a', brown:'#4a3b2a', ink:'#221f17',
+      line:'#cabd9f', dim:'#8a7c5e' };
 
     // seeded LCG for all randomness (no Math.random / clock)
     let seed=987654321;
@@ -99,10 +100,10 @@
     const GAP_MIN=58, GAP_MAX=104; // vertical spacing between platforms
 
     function platColor(type){
-      if(type==='spring') return C.amber;
-      if(type==='move') return '#c97a3a';
-      if(type==='fragile') return C.red;
-      return '#9a7a52';
+      if(type==='spring') return C.ochre;
+      if(type==='move') return C.olive;
+      if(type==='fragile') return C.clay;
+      return C.brown;
     }
 
     function makePlatform(y){
@@ -146,10 +147,10 @@
     function burst(cx,cy,color,n,sp=3){ for(let i=0;i<n;i++){ const a=rnd()*Math.PI*2, s=0.6+rnd()*sp;
       particles.push({x:cx,y:cy,vx:Math.cos(a)*s,vy:Math.sin(a)*s,life:1,color,r:2+rnd()*2}); } }
 
-    function bounce(strength){ player.vy=strength; burst(player.x, player.y+player.r, C.amber, 8, 2); }
+    function bounce(strength){ player.vy=strength; burst(player.x, player.y+player.r, C.brown, 8, 2); }
 
     function gameOver(){
-      state='over'; burst(player.x,player.y,C.red,22,4);
+      state='over'; burst(player.x,player.y,C.oxblood,22,4);
       let nb=false;
       if(score>best){ best=score; nb=true; try{ localStorage.setItem(BEST_KEY,best); }catch(e){} }
       document.getElementById('finalScore').textContent=score;
@@ -220,7 +221,7 @@
              player.y+player.r > py && player.y+player.r < py+PH+player.vy){
             if(p.type==='spring'||p.spring){ bounce(SPRING); }
             else if(p.type==='fragile'){
-              if(!p.used){ bounce(JUMP); p.used=true; p.breaking=1; burst(p.x+p.w/2,py,C.red,10,2.5); }
+              if(!p.used){ bounce(JUMP); p.used=true; p.breaking=1; burst(p.x+p.w/2,py,C.clay,10,2.5); }
             } else { bounce(JUMP); }
             break;
           }
@@ -255,25 +256,12 @@
 
     // ---------------------------------------------------------------- render
     function drawBackground(){
-      // climb-tinted vertical gradient
-      const climb=Math.max(0,-highest);
-      const tone=Math.min(1, climb/14000);
-      const g=ctx.createLinearGradient(0,0,0,H);
-      g.addColorStop(0, mix('#1d2438','#15110e',tone)); g.addColorStop(1, C.bg);
-      ctx.fillStyle=g; ctx.fillRect(0,0,W,H);
-      // parallax stars (deterministic from world position)
-      ctx.save();
-      for(let i=0;i<46;i++){
-        const sx=((i*97.3)%field.w)+field.x;
-        const sy=(( (i*173.7) - camY*0.35) % (H+40));
-        const yy=(sy+H+40)%(H+40)-20;
-        const a=0.10+ (i%5)*0.05;
-        ctx.globalAlpha=a; ctx.fillStyle=i%7===0?C.amber:'#6a5b48';
-        ctx.fillRect(sx, yy, i%9===0?2:1, i%9===0?2:1);
-      }
-      ctx.restore();
-      // field side guides
-      ctx.save(); ctx.globalAlpha=0.5; ctx.strokeStyle=C.line; ctx.lineWidth=1;
+      // clean solid cream page
+      ctx.fillStyle=C.bg; ctx.fillRect(0,0,W,H);
+      // subtle column panel so the play field reads on wide screens
+      ctx.fillStyle=C.bg2; ctx.fillRect(field.x, 0, field.w, H);
+      // field side guides — thin matte ink rules
+      ctx.save(); ctx.globalAlpha=0.55; ctx.strokeStyle=C.line; ctx.lineWidth=1;
       ctx.beginPath(); ctx.moveTo(field.x+0.5,0); ctx.lineTo(field.x+0.5,H);
       ctx.moveTo(field.x+field.w-0.5,0); ctx.lineTo(field.x+field.w-0.5,H); ctx.stroke();
       ctx.restore();
@@ -283,23 +271,23 @@
       const y=p.y-camY; if(y<-30||y>H+30) return;
       ctx.save(); ctx.globalAlpha=p.vis;
       const col=platColor(p.spring?'normal':p.type);
-      // body
-      ctx.fillStyle=col; ctx.strokeStyle=C.bg; ctx.lineWidth=2;
-      roundRect(p.x,y,p.w,PH,4); ctx.fill();
-      // top highlight
-      ctx.fillStyle='rgba(255,255,255,.18)';
-      roundRect(p.x+2,y+2,p.w-4,4,2); ctx.fill();
-      // wood/grain notch
-      ctx.fillStyle='rgba(0,0,0,.22)';
+      // body — matte fill with a thin ink keyline
+      ctx.fillStyle=col; ctx.strokeStyle=C.ink; ctx.lineWidth=1.5;
+      roundRect(p.x,y,p.w,PH,4); ctx.fill(); ctx.stroke();
+      // top edge — soft cream band (flat, not glossy)
+      ctx.fillStyle='rgba(239,230,210,.28)';
+      roundRect(p.x+2,y+2,p.w-4,3,2); ctx.fill();
+      // grain notch
+      ctx.fillStyle='rgba(34,31,23,.22)';
       ctx.fillRect(p.x+p.w*0.5-1, y+5, 2, PH-7);
-      // spring decoration
-      if(p.spring){ ctx.strokeStyle=C.amber; ctx.lineWidth=2.4;
+      // spring decoration — oxblood accent (the one bright element)
+      if(p.spring){ ctx.strokeStyle=C.oxblood; ctx.lineWidth=2.4;
         const cx=p.x+p.w/2; ctx.beginPath();
         ctx.moveTo(cx-6,y-2); ctx.lineTo(cx,y-9); ctx.lineTo(cx+6,y-2); ctx.stroke();
         ctx.beginPath(); ctx.moveTo(cx-6,y-7); ctx.lineTo(cx,y-13); ctx.lineTo(cx+6,y-7); ctx.stroke();
       }
       // fragile cracks
-      if(p.type==='fragile'){ ctx.strokeStyle='rgba(0,0,0,.35)'; ctx.lineWidth=1.4;
+      if(p.type==='fragile'){ ctx.strokeStyle='rgba(34,31,23,.40)'; ctx.lineWidth=1.4;
         ctx.beginPath(); ctx.moveTo(p.x+p.w*0.3,y); ctx.lineTo(p.x+p.w*0.42,y+PH);
         ctx.moveTo(p.x+p.w*0.66,y); ctx.lineTo(p.x+p.w*0.58,y+PH); ctx.stroke(); }
       ctx.restore();
@@ -315,22 +303,20 @@
       const sx=1- (player.vy<0?0.10:-0.08)*Math.abs(sv)*player.face*player.face;
       ctx.scale(sx*player.face, sy);
       const r=player.r;
-      // shadow ring
-      ctx.fillStyle='rgba(0,0,0,.35)'; ctx.beginPath(); ctx.ellipse(0,r*0.9,r*0.8,r*0.35,0,0,7); ctx.fill();
-      // body
-      const grad=ctx.createLinearGradient(0,-r,0,r);
-      grad.addColorStop(0, '#ff8e6e'); grad.addColorStop(1, C.red);
-      ctx.fillStyle=grad; ctx.strokeStyle=C.bg; ctx.lineWidth=2.5;
+      // soft contact shadow (subtle, matte)
+      ctx.fillStyle='rgba(34,31,23,.18)'; ctx.beginPath(); ctx.ellipse(0,r*0.9,r*0.8,r*0.35,0,0,7); ctx.fill();
+      // body — flat oxblood, the single accent, with an ink keyline
+      ctx.fillStyle=C.oxblood; ctx.strokeStyle=C.ink; ctx.lineWidth=2;
       ctx.beginPath(); ctx.arc(0,0,r,0,7); ctx.fill(); ctx.stroke();
-      // little wings/ears
-      ctx.fillStyle=C.amber;
+      // little wings/ears — ochre, flat
+      ctx.fillStyle=C.ochre;
       ctx.beginPath(); ctx.ellipse(-r*0.9,-r*0.2,r*0.4,r*0.7,-0.5,0,7); ctx.fill();
       ctx.beginPath(); ctx.ellipse(r*0.9,-r*0.2,r*0.4,r*0.7,0.5,0,7); ctx.fill();
-      // eyes
-      ctx.fillStyle=C.bone;
+      // eyes — cream with ink pupils
+      ctx.fillStyle='#f3ece0';
       ctx.beginPath(); ctx.arc(r*0.18,-r*0.15,r*0.30,0,7); ctx.fill();
       ctx.beginPath(); ctx.arc(r*0.52,-r*0.15,r*0.26,0,7); ctx.fill();
-      ctx.fillStyle=C.bg;
+      ctx.fillStyle=C.ink;
       ctx.beginPath(); ctx.arc(r*0.26,-r*0.15,r*0.13,0,7); ctx.fill();
       ctx.beginPath(); ctx.arc(r*0.56,-r*0.15,r*0.11,0,7); ctx.fill();
       ctx.restore();
@@ -344,10 +330,10 @@
 
     function drawReady(){
       ctx.save(); ctx.textAlign='center';
-      ctx.fillStyle=C.bone; ctx.font='700 30px "Anton", system-ui';
+      ctx.fillStyle=C.ink; ctx.font='900 30px "Fraunces", Georgia, serif';
       ctx.globalAlpha=0.92; ctx.fillText('SKY HOP', W/2, H*0.32);
-      ctx.font='13px "Space Mono", monospace'; ctx.fillStyle=C.dim;
-      ctx.globalAlpha=0.6+0.3*Math.sin(t/14);
+      ctx.font='13px "Newsreader", Georgia, serif'; ctx.fillStyle=C.dim;
+      ctx.globalAlpha=0.55+0.25*Math.sin(t/14);
       ctx.fillText('DRAG OR ← → TO START', W/2, H*0.32+30);
       ctx.restore();
     }
@@ -364,11 +350,6 @@
     function roundRect(x,y,w,h,r){ ctx.beginPath();
       ctx.moveTo(x+r,y); ctx.arcTo(x+w,y,x+w,y+h,r); ctx.arcTo(x+w,y+h,x,y+h,r);
       ctx.arcTo(x,y+h,x,y,r); ctx.arcTo(x,y,x+w,y,r); ctx.closePath(); }
-    function mix(a,b,t){ const ca=parseInt(a.slice(1),16), cb=parseInt(b.slice(1),16);
-      const r=Math.round(((ca>>16)&255)*(1-t)+((cb>>16)&255)*t);
-      const g=Math.round(((ca>>8)&255)*(1-t)+((cb>>8)&255)*t);
-      const bl=Math.round((ca&255)*(1-t)+(cb&255)*t);
-      return 'rgb('+r+','+g+','+bl+')'; }
 
     function frame(){ t++;
       if(state==='play') step();

@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
-  <meta name="theme-color" content="#15110e">
+  <meta name="theme-color" content="#efe6d2">
   <title>Pong — Gamf</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -16,7 +16,7 @@
     canvas{display:block;width:100%;height:100%;touch-action:none}
   </style>
 </head>
-<body class="gx" style="--gx-accent:#ff7a6c">
+<body class="gx" style="--gx-accent:#9b3a22">
   <script src="../../gamf-icons.js"></script>
   <div class="gx-hud">
     <a class="gx-hud__back" href="../../"><svg class="gx-ico"><use href="#i-back"/></svg> Arcade</a>
@@ -65,7 +65,11 @@
     import { onDrag } from './touch.js';
     const SLUG='pong', BEST_KEY='gamf-arcade-'+SLUG+'-best';
     const WIN_SCORE=7;
-    const RED='#d8412b', AMBER='#e8a23a', BONE='#f4ede1', BG='#15110e';
+    // warm 1970s print-catalogue palette
+    const OXBLOOD='#9b3a22', OCHRE='#c8923a', OLIVE='#6f6a3b', CLAY='#a4623a',
+          BROWN='#4a3b2a', INK='#221f17', CREAM='#efe6d2';
+    // legacy aliases mapped onto warm tones
+    const RED=CLAY, AMBER=OLIVE, BONE=INK, BG=CREAM;
     const canvas=document.getElementById('c'), ctx=canvas.getContext('2d');
     let W,H,dpr;
     function resize(){ dpr=Math.min(devicePixelRatio||1,2); W=innerWidth; H=innerHeight;
@@ -233,58 +237,47 @@
     function roundRect(x,y,w,h,r){ ctx.beginPath(); ctx.roundRect(x,y,w,h,r); }
 
     function render(){
-      // warm near-black backdrop
-      ctx.fillStyle=BG; ctx.fillRect(0,0,W,H);
-      // subtle scanline texture inside field
+      // clean cream backdrop
+      ctx.fillStyle=CREAM; ctx.fillRect(0,0,W,H);
+      // play field card — flat warm paper, slightly lighter than page
       ctx.save();
       roundRect(field.x,field.y,field.w,field.h,10); ctx.clip();
-      const g=ctx.createLinearGradient(0,field.y,0,field.y+field.h);
-      g.addColorStop(0,'#1b1410'); g.addColorStop(1,'#100c09'); ctx.fillStyle=g;
+      ctx.fillStyle='#f3ece0';
       ctx.fillRect(field.x,field.y,field.w,field.h);
-      ctx.globalAlpha=0.06; ctx.fillStyle=BONE;
-      for(let y=field.y;y<field.y+field.h;y+=4) ctx.fillRect(field.x,y,field.w,1.4);
       ctx.restore();
-      // field border
-      ctx.save(); ctx.globalAlpha=0.5; ctx.strokeStyle='#4a3826'; ctx.lineWidth=2;
+      // field border (matte ink line)
+      ctx.save(); ctx.strokeStyle=BROWN; ctx.lineWidth=2;
       roundRect(field.x,field.y,field.w,field.h,10); ctx.stroke(); ctx.restore();
-      // center net (dashed)
-      ctx.save(); ctx.globalAlpha=0.4; ctx.fillStyle='#5a4c3c';
+      // center net (dashed, printed)
+      ctx.save(); ctx.globalAlpha=0.5; ctx.fillStyle=OLIVE;
       const cx=field.x+field.w/2;
       for(let y=field.y+8;y<field.y+field.h-8;y+=26) ctx.fillRect(cx-2,y,4,14);
       ctx.restore();
-      // big center score
-      ctx.save(); ctx.globalAlpha=0.10; ctx.fillStyle=BONE;
-      ctx.font='400 120px Anton, system-ui'; ctx.textAlign='center'; ctx.textBaseline='middle';
+      // big center score (faint catalogue numerals)
+      ctx.save(); ctx.globalAlpha=0.12; ctx.fillStyle=INK;
+      ctx.font='900 120px Fraunces, system-ui'; ctx.textAlign='center'; ctx.textBaseline='middle';
       ctx.fillText(youScore, field.x+field.w*0.30, field.y+field.h/2);
       ctx.fillText(cpuScore, field.x+field.w*0.70, field.y+field.h/2);
       ctx.restore();
-      // player paddle (amber)
-      paddle(player, AMBER, '#ffce7a');
-      // ai paddle (red)
-      paddle(ai, RED, '#f08a76');
-      // ball
-      ctx.save(); ctx.shadowBlur=20; ctx.shadowColor=BONE;
-      const bg=ctx.createRadialGradient(ball.x-2,ball.y-2,1,ball.x,ball.y,ball.r);
-      bg.addColorStop(0,'#fffaf0'); bg.addColorStop(1,'#e8d9bf'); ctx.fillStyle=bg;
+      // player paddle (olive)
+      paddle(player, OLIVE);
+      // ai paddle (clay)
+      paddle(ai, CLAY);
+      // ball (oxblood — the single accent, matte printed ink)
+      ctx.save(); ctx.fillStyle=OXBLOOD;
       ctx.beginPath(); ctx.arc(ball.x,ball.y,ball.r,0,7); ctx.fill(); ctx.restore();
-      // particles
+      // particles (flat, no glow)
       particles.forEach(p=>{ ctx.save(); ctx.globalAlpha=Math.max(0,p.life); ctx.fillStyle=p.color;
-        ctx.shadowBlur=8; ctx.shadowColor=p.color; ctx.beginPath();
-        ctx.arc(p.x,p.y,2.6*p.life,0,7); ctx.fill(); ctx.restore(); });
+        ctx.beginPath(); ctx.arc(p.x,p.y,2.6*p.life,0,7); ctx.fill(); ctx.restore(); });
       // serve prompt
-      if(alive&&serving&&!paused){ ctx.save(); ctx.globalAlpha=0.5+0.3*Math.sin(t/12);
-        ctx.fillStyle=BONE; ctx.font='800 15px Archivo, system-ui'; ctx.textAlign='center';
+      if(alive&&serving&&!paused){ ctx.save(); ctx.globalAlpha=0.55+0.25*Math.sin(t/12);
+        ctx.fillStyle=INK; ctx.font='800 15px Archivo, system-ui'; ctx.textAlign='center';
         ctx.fillText('TAP OR SPACE TO SERVE', field.x+field.w/2, field.y+field.h/2+ball.r+34); ctx.restore(); }
     }
 
-    function paddle(p, base, hi){
-      ctx.save(); ctx.shadowBlur=14; ctx.shadowColor=base;
-      const pg=ctx.createLinearGradient(p.x,p.y,p.x,p.y+p.h);
-      pg.addColorStop(0,hi); pg.addColorStop(0.5,base); pg.addColorStop(1,hi);
-      ctx.fillStyle=pg; roundRect(p.x,p.y,p.w,p.h,7); ctx.fill();
-      ctx.globalAlpha=0.25; ctx.fillStyle='#ffffff';
-      roundRect(p.x+2,p.y+2,p.w-4,p.h*0.3,5); ctx.fill();
-      ctx.restore();
+    function paddle(p, base){
+      // flat matte block of warm ink
+      ctx.save(); ctx.fillStyle=base; roundRect(p.x,p.y,p.w,p.h,7); ctx.fill(); ctx.restore();
     }
 
     // How-to-play overlay
