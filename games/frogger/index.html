@@ -36,7 +36,7 @@
     <canvas id="c"></canvas>
   </div>
   <div class="gx-hint">
-    <span class="gx-hint__chip"><svg class="gx-ico"><use href="#i-arcade"/></svg> swipe to hop</span>
+    <span class="gx-hint__chip"><svg class="gx-ico"><use href="#i-arcade"/></svg> D-pad to hop</span>
     <span class="gx-hint__chip"><svg class="gx-ico"><use href="#i-up"/></svg> arrows / WASD</span>
     <span class="gx-hint__chip"><svg class="gx-ico"><use href="#i-pause"/></svg> P pause · R restart</span>
   </div>
@@ -60,9 +60,9 @@
       <div class="gx-modal__title">How to Play</div>
       <p class="gx-help__obj">Hop your frog across the road and river to fill all five goal slots at the top without getting hit, drowning, or running out of lives.</p>
       <ul class="gx-help__list">
-        <li><b>Swipe / Arrows</b><span>Hop</span></li>
+        <li><b>D-pad / Arrows</b><span>Hop</span></li>
         <li><b>WASD</b><span>Hop</span></li>
-        <li><b>Tap / Space</b><span>Restart when game over</span></li>
+        <li><b>Space</b><span>Restart when game over</span></li>
         <li><b>P</b><span>Pause</span></li>
         <li><b>R</b><span>Restart</span></li>
       </ul>
@@ -71,7 +71,6 @@
   </div>
   <script src="../../gamf-controls.js"></script>
   <script type="module">
-    import { onSwipe } from './touch.js';
 
     const SLUG='frogger', BEST_KEY='gamf-arcade-'+SLUG+'-best';
     // palette — warm 1970s print catalogue (matte earth tones, no glow/neon)
@@ -373,10 +372,6 @@
     }
 
     // ---- input ----
-    onSwipe(canvas,(d)=>{
-      if(d==='left')hop(-1,0); else if(d==='right')hop(1,0);
-      else if(d==='up')hop(0,-1); else hop(0,1);
-    },18);
     addEventListener('keydown',e=>{
       const k=e.key.length===1?e.key.toLowerCase():e.key;
       const m={ArrowLeft:[-1,0],a:[-1,0],ArrowRight:[1,0],d:[1,0],
@@ -389,19 +384,19 @@
     $('again').onclick=reset;
     $('resume').onclick=()=>togglePause(false);
 
-    // on-screen buttons (shared helper) — mirror the keyboard exactly:
-    // a direction restarts when dead, otherwise hops; plus Pause + Restart actions.
+    // on-screen buttons (shared helper) — Frogger is a turn-based HOP game, so the
+    // bottom-left D-pad is the WHOLE control: one tap = one hop in that direction
+    // (a dead frog just restarts). hold:false so a novice never auto-hops into a car.
+    // There's no gameplay action to fire, so the right thumb zone is left empty —
+    // a lone big button there would only be an accidental Pause under the thumb.
+    // Pause/Restart stay on the keyboard + the game-over screen, out of reach.
     const hopOrReset=(dx,dy)=>{ if(!alive){ reset(); return; } hop(dx,dy); };
     window.gamfControls({
       move:{
         left:()=>hopOrReset(-1,0), right:()=>hopOrReset(1,0),
         up:()=>hopOrReset(0,-1),   down:()=>hopOrReset(0,1)
       },
-      hold:false,                       // step game — one hop per press
-      actions:[
-        { label:'Pause', press:()=>togglePause() },
-        { label:'Restart', press:()=>reset() }
-      ]
+      hold:false                        // step game — one hop per press
     });
 
     // How-to-play overlay

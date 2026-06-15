@@ -14,16 +14,6 @@
     html, body { height: 100%; overflow: hidden; touch-action: none;
       -webkit-user-select: none; user-select: none; }
     canvas { display: block; width: 100%; height: 100%; touch-action: none; }
-    /* on-screen FIRE button for touch — pointer-events on so it's tappable */
-    .fire-btn { position: fixed; z-index: 5; right: calc(env(safe-area-inset-right) + 22px);
-      bottom: calc(env(safe-area-inset-bottom) + 70px); width: 84px; height: 84px; border-radius: 50%;
-      display: grid; place-items: center; cursor: pointer; pointer-events: auto;
-      font-family: var(--gx-font-display); font-weight: 700; font-size: var(--fs-sm); letter-spacing: .08em;
-      color: #efe6d2; border: 1px solid #7e2f1b;
-      background: #9b3a22;
-      transition: transform var(--t-fast); }
-    .fire-btn:active { transform: scale(.92); }
-    .fire-btn svg { width: 24px; height: 24px; }
   </style>
 </head>
 <body class="gx" style="--gx-accent:#9b3a22">
@@ -43,13 +33,10 @@
 
   <!-- Controls hint (design system) -->
   <div class="gx-hint">
-    <span class="gx-hint__chip"><svg class="gx-ico"><use href="#i-touch"/></svg> drag to aim &amp; thrust</span>
+    <span class="gx-hint__chip"><svg class="gx-ico"><use href="#i-touch"/></svg> ◀ ▶ rotate · ▲ thrust · Fire to shoot</span>
     <span class="gx-hint__chip"><svg class="gx-ico"><use href="#i-keyboard"/></svg> ← → rotate · ↑ thrust · Space fire</span>
     <span class="gx-hint__chip"><svg class="gx-ico"><use href="#i-pause"/></svg> P pause · R restart</span>
   </div>
-
-  <!-- Touch fire button -->
-  <div class="fire-btn" id="fireBtn" aria-label="Fire"><svg class="gx-ico"><use href="#i-play"/></svg></div>
 
   <!-- Game-over / pause modal (design system) -->
   <div class="gx-modal" id="over">
@@ -75,9 +62,9 @@
       <div class="gx-modal__title">How to Play</div>
       <p class="gx-help__obj">Blast every asteroid to dust without letting one smash your ship — clear the field to warp to the next, tougher wave.</p>
       <ul class="gx-help__list">
-        <li><b>Drag / ← →</b><span>Aim &amp; thrust</span></li>
-        <li><b>Drag held / ↑ W</b><span>Thrust forward</span></li>
-        <li><b>Tap Fire / Space</b><span>Shoot</span></li>
+        <li><b>◀ ▶ / ← →</b><span>Rotate the ship</span></li>
+        <li><b>▲ / ↑ W</b><span>Thrust forward</span></li>
+        <li><b>Hold Fire / Space</b><span>Shoot</span></li>
         <li><b>P</b><span>Pause</span></li>
         <li><b>R</b><span>Restart</span></li>
       </ul>
@@ -87,7 +74,6 @@
 
   <script src="../../gamf-controls.js"></script>
   <script type="module">
-    import { onDrag } from './touch.js';
     const SLUG='asteroids', BEST_KEY='gamf-arcade-'+SLUG+'-best';
     const canvas=document.getElementById('c'), ctx=canvas.getContext('2d');
     // warm editorial palette — matte printed ink, no neon
@@ -211,22 +197,9 @@
     });
 
     // ---------- input: TOUCH ----------
-    // Drag on the canvas: ship aims toward the drag point and thrusts while held.
-    let touchAim=null;   // {x,y} target in screen space, or null
-    onDrag(canvas,{
-      start:({x,y})=>{ if(alive&&!paused) touchAim={x,y}; },
-      move:({x,y})=>{ if(touchAim) touchAim={x,y}; },
-      end:()=>{ touchAim=null; }
-    });
-    // dedicated fire button (also rapid-fires while held)
-    const fireBtn=document.getElementById('fireBtn');
-    let fireHeld=false;
-    fireBtn.addEventListener('pointerdown',e=>{ e.preventDefault();
-      if(!alive){ start(); return; } fireHeld=true; fire(); });
-    const releaseFire=()=>{ fireHeld=false; };
-    fireBtn.addEventListener('pointerup',releaseFire);
-    fireBtn.addEventListener('pointercancel',releaseFire);
-    fireBtn.addEventListener('pointerleave',releaseFire);
+    // Touch movement & fire live entirely on the shared thumb-zone controls
+    // (D-pad bottom-left, Fire button bottom-right) configured further below.
+    // No tap/drag-on-canvas handlers — they'd fight the on-screen buttons.
 
     document.getElementById('again').onclick=start;
     document.getElementById('resume').onclick=()=>togglePause(false);
@@ -255,21 +228,13 @@
       t++;
       if(invuln>0) invuln--;
       if(ship.cool>0) ship.cool--;
-      if(fireHeld && t%FIRE_COOLDOWN===0) fire();
 
-      // steering
+      // steering — rotate while ← / → (or D-pad ◀ ▶) held
       if(keys.left)  ship.a-=TURN;
       if(keys.right) ship.a+=TURN;
       ship.thrusting=false;
 
-      if(touchAim){
-        // aim toward target; thrust proportional to distance
-        const dx=touchAim.x-ship.x, dy=touchAim.y-ship.y, dist=Math.hypot(dx,dy);
-        const target=Math.atan2(dy,dx);
-        let diff=((target-ship.a+Math.PI)%TAU+TAU)%TAU-Math.PI;
-        ship.a+=Math.max(-TURN*1.6,Math.min(TURN*1.6,diff));
-        if(dist>SHIP_R*1.4){ ship.vx+=Math.cos(ship.a)*THRUST; ship.vy+=Math.sin(ship.a)*THRUST; ship.thrusting=true; }
-      }
+      // thrust forward while ↑ / W (or D-pad ▲) held
       if(keys.up){ ship.vx+=Math.cos(ship.a)*THRUST; ship.vy+=Math.sin(ship.a)*THRUST; ship.thrusting=true; }
 
       if(ship.thrusting){
@@ -394,16 +359,18 @@
       moveTimers[dir]=setTimeout(()=>{ keys[dir]=false; }, 180); }
     window.gamfControls({
       move:{
-        left:()=>holdMove('left'),     // ← / A : rotate left
-        right:()=>holdMove('right'),   // → / D : rotate right
-        up:()=>holdMove('up')          // ↑ / W : thrust forward
-        // no 'down' — game has no reverse/down control
+        left:()=>holdMove('left'),     // ◀ — rotate left  (← / A)
+        right:()=>holdMove('right'),   // ▶ — rotate right (→ / D)
+        up:()=>holdMove('up')          // ▲ — thrust forward (↑ / W)
+        // no 'down' — Asteroids has no reverse
       },
-      hold:true,                       // continuous rotate/thrust while held
+      hold:true,                       // hold the D-pad to keep rotating / thrusting
       actions:[
-        { label:'Fire', press:()=>{ if(!alive) start(); else fire(); } }, // Space/Enter
-        { label:'Pause', press:()=>togglePause() },                       // P
-        { label:'Restart', press:()=>start() }                            // R
+        // ONE big primary: Fire. hold:true rapid-fires while held (rate-limited by
+        // FIRE_COOLDOWN). When dead, the same button restarts. No Pause/Restart in
+        // the thumb cluster — they're on the keyboard + the game-over screen, so a
+        // novice can't fumble Pause while reaching for Fire.
+        { label:'Fire', hold:true, press:()=>{ if(!alive) start(); else fire(); } }
       ]
     });
 

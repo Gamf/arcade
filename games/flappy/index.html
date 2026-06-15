@@ -37,7 +37,7 @@
 
   <!-- Controls hint (design system) -->
   <div class="gx-hint">
-    <span class="gx-hint__chip"><svg class="gx-ico"><use href="#i-play"/></svg> Tap / hold to flap</span>
+    <span class="gx-hint__chip"><svg class="gx-ico"><use href="#i-play"/></svg> Flap button to fly</span>
     <span class="gx-hint__chip"><svg class="gx-ico"><use href="#i-up"/></svg> Space · ↑ · W flap</span>
     <span class="gx-hint__chip"><svg class="gx-ico"><use href="#i-pause"/></svg> P pause · R restart</span>
   </div>
@@ -68,8 +68,8 @@
       <div class="gx-modal__title">HOW TO PLAY</div>
       <p class="gx-help__obj">Flap to fly the bird through the gaps between pipes without hitting a pipe, the ground or the ceiling.</p>
       <ul class="gx-help__list">
-        <li><b>Tap / Space / ↑</b> <span>Flap</span></li>
-        <li><b>Swipe down / ↓</b> <span>Dive faster</span></li>
+        <li><b>Flap button / Space / ↑</b> <span>Flap</span></li>
+        <li><b>Dive button / ↓</b> <span>Dive faster</span></li>
         <li><b>P</b> <span>Pause</span></li>
         <li><b>R</b> <span>Restart</span></li>
       </ul>
@@ -245,35 +245,33 @@
     });
 
     // ---------- input: TOUCH / POINTER ----------
-    // Restart from the death pop on a clean tap (shared helper keeps this self-contained).
+    // Flapping lives on the big on-screen Flap button (bottom-right thumb zone) so a
+    // novice always reaches for the same spot — no tap-anywhere-to-flap competing with it.
+    // The one canvas gesture we keep is a friendly tap on the death pop to restart.
     onTap(canvas, ()=>{
       if(mode==='dead' && t>=deadShowAt) start();
     });
-    // Flap on pointerdown for the snappiest one-button feel (touch, mouse and stylus).
-    // Single handler => exactly one flap per press, no double-trigger with onTap.
-    canvas.addEventListener('pointerdown', e=>{
-      e.preventDefault();
-      if(mode==='dead' || paused) return;
-      flap();
-    });
 
     // ---------- input: ON-SCREEN BUTTONS (shared helper) ----------
-    // Every keyboard action mirrored to a button so the game is fully button-playable.
-    function btnFlap(){            // ▲ — same as Space/↑/W: flap, or restart from the death pop
+    // Flappy is a ONE-BUTTON game: the only thing a novice needs is FLAP. So we drop the
+    // D-pad entirely and give one big round PRIMARY button under the right thumb. The dive
+    // is a tiny optional secondary. Pause/Restart stay OFF the thumb cluster (keyboard P/R,
+    // the game-over card's "Play again", and a tap on the death pop already cover them) so
+    // nobody hits Pause while reaching for Flap.
+    function btnFlap(){            // big primary — same as Space/↑/W: flap, or restart from the death pop
       if(helpEl.classList.contains('gx-show')){ hideHelp(); return; }
       if(mode==='dead'){ if(t>=deadShowAt) start(); return; }
       if(paused) return;
       flap();
     }
-    function btnDive(){            // ▼ — same as ↓/S: quick dive nudge
+    function btnDive(){            // small secondary — same as ↓/S: quick dive nudge
       if(mode==='play' && !paused) bird.vy=Math.min(MAXFALL, bird.vy+4*S);
     }
     window.gamfControls({
-      move: { up:btnFlap, down:btnDive },   // only the two directions this game uses
-      hold: false,                          // step game: one flap/dive per press
+      // no move/D-pad — one action is all this game has
       actions: [
-        { label:'Pause',   press:()=>togglePause() },  // P
-        { label:'Restart', press:()=>start() },        // R
+        { label:'Flap', press:btnFlap },   // big primary, right under the thumb
+        { label:'Dive', press:btnDive },   // small optional nudge
       ],
     });
 
@@ -529,7 +527,7 @@
       if(Math.floor(t/26)%2===0){
         ctx.font=`700 ${Math.round(15*S)}px 'Space Mono', monospace`;
         ctx.fillStyle=BROWN;
-        ctx.fillText('TAP  ·  SPACE  ·  ↑   TO FLAP', W/2, H*0.62);
+        ctx.fillText('FLAP BUTTON  ·  SPACE  ·  ↑', W/2, H*0.62);
       }
       ctx.restore();
     }

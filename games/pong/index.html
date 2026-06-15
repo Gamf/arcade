@@ -28,8 +28,8 @@
   </div>
   <canvas id="c"></canvas>
   <div class="gx-hint" id="hint">
-    <span class="gx-hint__chip"><svg class="gx-ico"><use href="#i-up"/></svg> drag to move paddle</span>
-    <span class="gx-hint__chip"><svg class="gx-ico"><use href="#i-down"/></svg> ↑ ↓ / W S · Space serve</span>
+    <span class="gx-hint__chip"><svg class="gx-ico"><use href="#i-up"/></svg> ▲▼ pad / drag to move</span>
+    <span class="gx-hint__chip"><svg class="gx-ico"><use href="#i-down"/></svg> ↑ ↓ / W S · Serve button</span>
     <span class="gx-hint__chip"><svg class="gx-ico"><use href="#i-pause"/></svg> P pause · R restart</span>
   </div>
   <div class="gx-modal" id="paused">
@@ -53,8 +53,8 @@
       <div class="gx-modal__title">How to Play</div>
       <p class="gx-help__obj">Beat the CPU to 7 points by sending the ball past its paddle without letting it get past yours.</p>
       <ul class="gx-help__list">
-        <li><b>Drag / ↑ ↓ / W S</b><span>Move paddle</span></li>
-        <li><b>Tap / Space</b><span>Serve</span></li>
+        <li><b>▲▼ / Drag / ↑ ↓ / W S</b><span>Move paddle</span></li>
+        <li><b>Serve button / Space</b><span>Serve</span></li>
         <li><b>P</b><span>Pause</span></li>
         <li><b>R</b><span>Restart</span></li>
       </ul>
@@ -159,10 +159,8 @@
 
     function setPlayerCenter(py){ player.y=clampPad(py-player.h/2); }
 
-    // touch: drag anywhere to move your paddle, tap to serve
-    let dragMoved=false;
-    onDrag(canvas,{ start:()=>{dragMoved=false;}, move:({y,dy})=>{ if(Math.abs(dy)>0)dragMoved=true;
-        if(alive&&!paused) setPlayerCenter(y); }, end:()=>{ if(!dragMoved){ if(!alive) startGame(); else serve(); } } });
+    // touch: drag anywhere to move your paddle (serve is the dedicated button below)
+    onDrag(canvas,{ move:({y})=>{ if(alive&&!paused) setPlayerCenter(y); } });
 
     // keyboard
     let keyDir=0;
@@ -225,7 +223,10 @@
 
     function frame(){ t++;
       if(alive&&!paused){
-        if(keyDir){ player.y=clampPad(player.y + keyDir*8.5); }
+        // touch D-pad: keep gliding while held, stop ~1 repeat-tick after release
+        if(touchDir && performance.now()>touchUntil) touchDir=0;
+        const dir=keyDir||touchDir;
+        if(dir){ player.y=clampPad(player.y + dir*8.5); }
         aiThink();
         step();
       }
@@ -273,7 +274,7 @@
       // serve prompt
       if(alive&&serving&&!paused){ ctx.save(); ctx.globalAlpha=0.55+0.25*Math.sin(t/12);
         ctx.fillStyle=INK; ctx.font='800 15px Archivo, system-ui'; ctx.textAlign='center';
-        ctx.fillText('TAP OR SPACE TO SERVE', field.x+field.w/2, field.y+field.h/2+ball.r+34); ctx.restore(); }
+        ctx.fillText('SERVE TO START', field.x+field.w/2, field.y+field.h/2+ball.r+34); ctx.restore(); }
     }
 
     function paddle(p, base){
@@ -293,18 +294,20 @@
     document.getElementById('gxHelpClose').onclick=hideHelp;
     helpEl.addEventListener('click', e=>{ if(e.target===helpEl) hideHelp(); });
 
-    // on-screen buttons (shared helper) — drive the SAME functions as the keyboard.
-    // Up/Down = paddle move (Arrow/W S); Serve = Space/Enter; Pause = P; Restart = R.
-    const padStep=10;
-    function movePaddle(dir){ if(alive&&!paused) player.y=clampPad(player.y + dir*padStep); }
+    // on-screen buttons (shared helper) — vertical paddle, so the D-pad is up/down only.
+    // The helper auto-repeats a held D-pad button (hold:true) but gives no release event,
+    // so each tick sets touchDir AND refreshes a deadline; the frame loop drives the SAME
+    // smooth per-frame movement as the keyboard and lets go ~1 tick after you release.
+    // The single big primary button serves — Pause/Restart stay on the keyboard + game-over
+    // screen so a novice can't fumble them while reaching for Serve.
+    let touchDir=0, touchUntil=0;
+    function holdMove(dir){ touchDir=dir; touchUntil=performance.now()+170; }
     function serveOrStart(){ if(!alive) startGame(); else serve(); }
     window.gamfControls({
-      move:{ up:()=>movePaddle(-1), down:()=>movePaddle(1) },
+      move:{ up:()=>holdMove(-1), down:()=>holdMove(1) },
       hold:true,
       actions:[
         { label:'Serve', press:serveOrStart },
-        { label:'Pause', press:()=>togglePause() },
-        { label:'Restart', press:startGame },
       ],
     });
 

@@ -37,7 +37,6 @@
 
   <!-- Controls hint (design system) -->
   <div class="gx-hint">
-    <span class="gx-hint__chip"><svg class="gx-ico"><use href="#i-target"/></svg> tap the sky to intercept</span>
     <span class="gx-hint__chip"><svg class="gx-ico"><use href="#i-bolt"/></svg> ← → aim · Space fire</span>
     <span class="gx-hint__chip"><svg class="gx-ico"><use href="#i-pause"/></svg> P pause · R restart</span>
   </div>
@@ -67,9 +66,9 @@
       <div class="gx-modal__title">How to Play</div>
       <p class="gx-help__obj">Defend your six cities by intercepting incoming enemy missiles before they hit the ground.</p>
       <ul class="gx-help__list">
-        <li><b>Tap sky / Space</b><span>Fire interceptor</span></li>
-        <li><b>← → / A D</b><span>Aim turret</span></li>
-        <li><b>↑ / W</b><span>Aim straight up</span></li>
+        <li><b>Fire / Space</b><span>Fire interceptor</span></li>
+        <li><b>◀ ▶ / ← → / A D</b><span>Aim turret (hold to sweep)</span></li>
+        <li><b>▲ / ↑ / W</b><span>Aim straight up</span></li>
         <li><b>P</b><span>Pause</span></li>
         <li><b>R</b><span>Restart</span></li>
       </ul>
@@ -79,7 +78,6 @@
 
   <script src="../../gamf-controls.js"></script>
   <script type="module">
-    import { onTap } from './touch.js';
     const SLUG='missile', BEST_KEY='gamf-arcade-'+SLUG+'-best';
     const canvas=document.getElementById('c'), ctx=canvas.getContext('2d');
 
@@ -267,13 +265,9 @@
     });
 
     // ---------- input: TOUCH / POINTER ----------
-    onTap(canvas,(x,y)=>{
-      if(!aliveGame){ start(); return; }
-      if(paused) return;
-      // map client coords -> canvas coords (canvas fills viewport)
-      const r=canvas.getBoundingClientRect();
-      fireAt(x-r.left, y-r.top);
-    });
+    // Touch firing/aiming is handled by the on-screen D-pad + Fire button
+    // (see window.gamfControls below). No tap-anywhere-to-fire: it would fight
+    // the thumb reaching for the Fire button and confuse a first-time player.
 
     document.getElementById('again').onclick=start;
     document.getElementById('resume').onclick=()=>togglePause(false);
@@ -560,13 +554,15 @@
       aimAngle+=AIM_STEP; if(aimAngle>-0.18) aimAngle=-0.18; }
     function aimUp(){ if(!aliveGame||paused) return; aimAngle=-Math.PI/2; }   // ↑ / W
     function fireBtn(){ if(!aliveGame){ start(); return; } if(!paused) fireAim(); } // Space
+    // Thumb-zone controls: bottom-LEFT D-pad aims the turret (hold ◀ ▶ to sweep
+    // continuously, ▲ snaps straight up); bottom-RIGHT a single big Fire button.
+    // Pause/Restart are intentionally NOT here — a novice reaching for Fire must
+    // not hit them by accident; they live on the keyboard (P/R) and the modals.
     window.gamfControls({
       move:{ left:aimLeft, right:aimRight, up:aimUp },   // turret aim (no down in this game)
-      hold:true,                                          // auto-repeat for continuous aiming
+      hold:true,                                          // hold ◀/▶ to keep rotating — novices hold, not tap
       actions:[
-        { label:'Fire',  press:fireBtn },
-        { label:'Pause', press:()=>togglePause() },
-        { label:'Restart', press:start },
+        { label:'Fire', press:fireBtn },                  // the one gameplay action — big primary button
       ],
     });
 

@@ -196,24 +196,31 @@
     document.getElementById('again').onclick=()=>{ start(); };
     document.getElementById('resume').onclick=()=>togglePause(false);
 
-    // on-screen buttons (shared helper) — drive the same logic as the keyboard.
-    // Steering nudges velocity per press; hold:true auto-repeats while held, and
-    // friction stops the player on release (same feel as tapping ← →).
-    function steer(dir){ if(state!=='play') start(); if(state==='play') player.vx += dir*MOVE*1.4; }
+    // on-screen buttons (shared helper) — left/right only, no jump button
+    // (hopping is automatic on every platform). HOLD a D-pad button to keep
+    // steering, exactly like holding ← →. The helper auto-repeats the press
+    // every ~110ms while held; each press refreshes touchDir for a short window
+    // so step() drives steering every frame (and suppresses friction) until you
+    // let go and the player coasts to a stop. No action cluster: there is no
+    // gameplay action, and Pause/Restart live on the keyboard + game-over screen.
+    let touchDir=0, touchHold=0;
+    function steer(dir){ if(state!=='play') start(); touchDir=dir; touchHold=12; }
     window.gamfControls({
       move:{ left:()=>steer(-1), right:()=>steer(1) },
       hold:true,
-      actions:[
-        { label:'Pause', press:()=>togglePause() },
-        { label:'Restart', press:()=>{ reset(); state='play'; } },
-      ],
+      actions:[],
     });
 
     // ---------------------------------------------------------------- sim
     function step(){
-      // horizontal steering
-      if(keyDir){ player.vx += keyDir*MOVE; }
-      if(!keyDir && !dragActive) player.vx*=FRICT;
+      // horizontal steering — keyboard (held key), D-pad (held button), or drag.
+      // touchHold keeps the held D-pad direction live between auto-repeats so it
+      // feels like holding ← →; it lapses a few frames after release and the
+      // player coasts to a stop under friction.
+      if(touchHold>0) touchHold--; else touchDir=0;
+      const dir=keyDir||touchDir;
+      if(dir){ player.vx += dir*MOVE; }
+      if(!dir && !dragActive) player.vx*=FRICT;
       player.vx=Math.max(-MAXVX,Math.min(MAXVX,player.vx));
       player.x+=player.vx;
       if(player.vx>0.4) player.face=1; else if(player.vx<-0.4) player.face=-1;

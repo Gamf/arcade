@@ -165,7 +165,13 @@
     document.getElementById('gxHelpClose').onclick=hideHelp;
     help.addEventListener('click',e=>{ if(e.target===help) hideHelp(); });
 
-    // on-screen buttons (everything is a button) — same fns the keyboard uses
+    // on-screen buttons — same fns the keyboard uses.
+    // Snake is pure steering: a 4-way D-pad bottom-left is the whole game.
+    // hold:false — the snake moves on its own timer; you TAP a direction to
+    // change heading, you never hold to keep moving. There are NO gameplay
+    // action buttons, so the bottom-right thumb zone is left empty: Pause (P)
+    // and Restart (R) live on the keyboard and the game-over screen, keeping
+    // them out of reach of a novice's thumb hunting for a turn.
     window.gamfControls({
       move: {
         left:  ()=>setDir(-1,0),
@@ -173,11 +179,7 @@
         up:    ()=>setDir(0,-1),
         down:  ()=>setDir(0,1),
       },
-      hold: false,                       // snake steers in discrete steps, no auto-repeat
-      actions: [
-        { label:'Pause',   press:()=>togglePause() },
-        { label:'Restart', press:()=>reset() },
-      ],
+      hold: false,
     });
 
     reset(); loop();

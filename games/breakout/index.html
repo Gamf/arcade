@@ -28,7 +28,7 @@
     <button class="gx-help__open" id="gxHelpOpen" aria-label="How to play"><svg class="gx-ico"><use href="#i-info"/></svg></button></div>
   <canvas id="c"></canvas>
   <div class="gx-hint" id="hint">
-    <span class="gx-hint__chip"><svg class="gx-ico"><use href="#i-touch"/></svg> drag · tap to launch</span>
+    <span class="gx-hint__chip"><svg class="gx-ico"><use href="#i-touch"/></svg> ◀ ▶ move · Launch button</span>
     <span class="gx-hint__chip"><svg class="gx-ico"><use href="#i-keyboard"/></svg> ← → / A D · Space launch</span>
     <span class="gx-hint__chip"><svg class="gx-ico"><use href="#i-pause"/></svg> P pause · R restart</span>
   </div>
@@ -52,8 +52,8 @@
       <div class="gx-modal__title">How to Play</div>
       <p class="gx-help__obj">Bounce the ball off your paddle to smash every brick on screen without letting the ball fall past the bottom.</p>
       <ul class="gx-help__list">
-        <li><b>Drag / ← → A D</b><span>Move paddle</span></li>
-        <li><b>Tap / Space</b><span>Launch ball</span></li>
+        <li><b>◀ ▶ / drag / ← → A D</b><span>Move paddle</span></li>
+        <li><b>Launch / Space</b><span>Launch ball</span></li>
         <li><b>P</b><span>Pause</span></li>
         <li><b>R</b><span>Restart</span></li>
       </ul>
@@ -141,10 +141,10 @@
     function setPaddleCenter(px){ paddle.x=Math.max(field.x, Math.min(field.x+field.w-paddle.w, px-paddle.w/2));
       if(!launched) ball.x=paddle.x+paddle.w/2; }
 
-    // touch: drag to move, tap to launch
-    let dragMoved=false;
-    onDrag(canvas,{ start:()=>{dragMoved=false;}, move:({x,dx})=>{ if(Math.abs(dx)>0)dragMoved=true;
-        if(alive&&!paused) setPaddleCenter(x); }, end:({x})=>{ if(!dragMoved) launch(); } });
+    // touch: drag the canvas to slide the paddle (a familiar affordance).
+    // Launching is the Launch button only — no tap-anywhere-to-launch, so a novice
+    // can't fire the ball by accident while reaching for the on-screen buttons.
+    onDrag(canvas,{ move:({x})=>{ if(alive&&!paused) setPaddleCenter(x); } });
 
     // keyboard
     let keyDir=0;
@@ -238,7 +238,7 @@
       // "tap to launch" prompt
       if(alive&&!launched&&!paused){ ctx.save(); ctx.globalAlpha=0.5+0.3*Math.sin(t/12);
         ctx.fillStyle='#4a3b2a'; ctx.font='600 15px system-ui'; ctx.textAlign='center';
-        ctx.fillText('tap or Space to launch', field.x+field.w/2, paddle.y-30); ctx.restore(); }
+        ctx.fillText('Launch button or Space to launch', field.x+field.w/2, paddle.y-30); ctx.restore(); }
     }
 
     // ---------- How to play overlay ----------
@@ -259,17 +259,21 @@
     document.getElementById('gxHelpClose').addEventListener('click',closeHelp);
     helpEl.addEventListener('click',e=>{ if(e.target===helpEl) closeHelp(); });
 
-    // on-screen buttons (everything is a button) — wired to the same logic as the keyboard
+    // on-screen buttons — wired to the same logic as the keyboard.
+    // Paddle game: D-pad shows only ◀ ▶ and HOLDS (novices hold, never tap-spam).
+    // The step per repeat (~9/frame keyboard) must be big enough to feel responsive
+    // on the ~9Hz auto-repeat, so move a solid chunk of paddle width each press.
+    const TOUCH_STEP=()=>Math.max(36, paddle.w*0.55);
     window.gamfControls({
       move: {
-        left:  ()=>{ if(alive&&!paused) setPaddleCenter(paddle.x+paddle.w/2 - 9); },
-        right: ()=>{ if(alive&&!paused) setPaddleCenter(paddle.x+paddle.w/2 + 9); },
+        left:  ()=>{ if(alive&&!paused) setPaddleCenter(paddle.x+paddle.w/2 - TOUCH_STEP()); },
+        right: ()=>{ if(alive&&!paused) setPaddleCenter(paddle.x+paddle.w/2 + TOUCH_STEP()); },
       },
-      hold: true,  // continuous paddle movement while held
+      hold: true,  // continuous paddle movement while held — a novice will hold, not tap
       actions: [
+        // single gameplay action: launch the ball (or start a new game when over).
+        // Pause/Restart stay on the keyboard + game-over screen, out of the thumb cluster.
         { label:'Launch', press:()=>{ if(!alive) startGame(); else launch(); } },
-        { label:'Pause',  press:()=>togglePause() },
-        { label:'Restart',press:()=>startGame() },
       ],
     });
 
